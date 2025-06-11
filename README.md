@@ -198,8 +198,8 @@ This key is required for the Genkit AI flows to function.
 ### Installation
 1.  Clone the repository:
     ```bash
-    git clone <repository-url>
-    cd <repository-name>
+    git clone https://github.com/kxshish19/careercompass.git
+    cd careercompass
     ```
 2.  Install dependencies:
     ```bash
