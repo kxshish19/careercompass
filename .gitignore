@@ -1,45 +1,61 @@
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+.pnp.js
+.yarn/install-state.gz
 
-# testing
-/coverage
-
-# next.js
+# Next.js
 /.next/
 /out/
+/build/
 
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# vercel
-.vercel
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
 
-.genkit/*
-.env*
+# Local environment variables
+.env*.local
+.env
 
-# firebase
+# Debugging
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Test files
+/coverage
+/.nyc_output
+
+# Misc
+.firebase/
+*.cache
+*.sublime-project
+*.sublime-workspace
 firebase-debug.log
-firestore-debug.log
+firebase-debug.*.log
+
+# Genkit (if any local state or logs are generated that shouldn't be committed)
+# .genkit/ (if it stores local-only data) - typically Genkit output is in .genkit/state
+.genkit/state/*.json
+!/.genkit/state/traces.json.template
+.genkit/log/*.log
+
+# Patch-package
+patches/
