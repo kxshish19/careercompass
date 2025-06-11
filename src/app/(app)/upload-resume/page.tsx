@@ -26,25 +26,40 @@ if (typeof window !== 'undefined') {
 const MINIMAL_TEXT_LENGTH_THRESHOLD = 100; // Characters
 
 export default function UploadResumePage() {
-  const { setResumeText: setContextResumeText, setResumeAnalysis: setContextResumeAnalysis } = useAppContext();
+  const { 
+    setResumeText: setContextResumeText, 
+    setResumeAnalysis: setContextResumeAnalysis,
+    resumeText: initialResumeText,
+    resumeAnalysis: initialResumeAnalysis 
+  } = useAppContext();
+  
   const [selectedFiles, setSelectedFiles] = useState<File[] | null>(null);
-  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [extractedText, setExtractedText] = useState<string | null>(initialResumeText);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<ResumeGraderOutput | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<ResumeGraderOutput | null>(initialResumeAnalysis);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
 
   useEffect(() => {
+    // Sync with context if initial data is available
+    if (initialResumeText && !extractedText) {
+      setExtractedText(initialResumeText);
+    }
+    if (initialResumeAnalysis && !analysisResult) {
+      setAnalysisResult(initialResumeAnalysis);
+    }
+  }, [initialResumeText, initialResumeAnalysis, extractedText, analysisResult]);
+
+
+  useEffect(() => {
     // Clear results if files are removed or selection is empty
     if (!selectedFiles || selectedFiles.length === 0) {
-      setExtractedText(null);
-      setAnalysisResult(null);
-      setContextResumeText(null);
-      setContextResumeAnalysis(null);
+      // Only clear if the user actively removes files, not on initial load if context has data
+      // This logic might need refinement based on desired UX for file re-selection
     }
-  }, [selectedFiles, setContextResumeText, setContextResumeAnalysis]);
+  }, [selectedFiles]);
 
   // Helper function to process a single file (PDF, DOCX, or Image)
   async function processSingleFile(file: File): Promise<string> {
@@ -108,8 +123,11 @@ export default function UploadResumePage() {
     if (files && files.length > 0) {
       const fileList = Array.from(files);
       setSelectedFiles(fileList);
+      // Reset previous state when new files are selected
       setExtractedText(null); 
+      setContextResumeText(null);
       setAnalysisResult(null); 
+      setContextResumeAnalysis(null);
       setIsProcessingFile(true);
       let combinedText = '';
 
@@ -123,7 +141,8 @@ export default function UploadResumePage() {
           const allImages = fileList.every(f => f.type.startsWith('image/'));
           if (!allImages) {
             toast({ variant: 'destructive', title: 'Unsupported Selection', description: 'If selecting multiple files, all must be images. Please upload PDF/DOCX as single files.' });
-            setSelectedFiles(null);
+            setSelectedFiles(null); // Clear invalid selection
+            // No early return, finally block will still run
           } else {
             toast({ title: 'Processing Multiple Images...', description: `Extracting text from ${fileList.length} images. This may take some time.` });
             for (let i = 0; i < fileList.length; i++) {
@@ -147,27 +166,29 @@ export default function UploadResumePage() {
           setExtractedText(combinedText);
           setContextResumeText(combinedText); 
           toast({ title: 'File(s) Processed', description: 'Resume text extracted successfully. Ready for analysis.' });
-        } else if (selectedFiles && selectedFiles.length > 0) { // If files were selected but resulted in no text
-           // Check if a specific error toast was already shown (e.g. "Unsupported Selection")
-           const wasUnsupportedMultiSelect = fileList.length > 1 && !fileList.every(f => f.type.startsWith('image/'));
-           if (!wasUnsupportedMultiSelect) { // Avoid double-toasting if it was due to unsupported multi-selection
-             toast({ variant: 'default', title: 'No Text Found', description: 'No text content could be extracted or content was minimal.'});
-           }
-           setSelectedFiles(null); // Clear selection if it's unusable or yielded nothing
+        } else if (selectedFiles && selectedFiles.length > 0 && !(fileList.length > 1 && !fileList.every(f => f.type.startsWith('image/')))) { 
+           // If files were selected but resulted in no text, and it wasn't an unsupported multi-select error already handled
+           toast({ variant: 'default', title: 'No Text Found', description: 'No text content could be extracted or content was minimal.'});
+           // Don't clear selectedFiles here, user might want to try analyzing with what was (not) extracted or re-upload
         }
 
       } catch (error) {
         console.error('Error processing file(s):', error);
         toast({ variant: 'destructive', title: 'File Processing Error', description: 'Could not read text from the file(s). Check console for details.' });
-        setSelectedFiles(null);
+        setSelectedFiles(null); // Clear selection on major error
       } finally {
         setIsProcessingFile(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ""; // Clear file input for re-selection
-        }
+        // Do not clear fileInputRef.current.value here if we want to keep the selection visible
+        // However, if we always want to allow re-selection of the same file, clearing it is fine.
+        // For now, let's leave it to allow users to see what they selected.
       }
     } else {
       setSelectedFiles(null); // No files selected or input cleared
+      // Clear context if no files are selected
+      setExtractedText(null); 
+      setContextResumeText(null);
+      setAnalysisResult(null); 
+      setContextResumeAnalysis(null);
     }
   };
 
@@ -182,11 +203,12 @@ export default function UploadResumePage() {
     }
 
     setIsLoadingAnalysis(true);
-    setAnalysisResult(null);
+    setAnalysisResult(null); // Clear previous analysis before new one
+    setContextResumeAnalysis(null); 
     try {
       const result = await resumeGrader({ resumeText: extractedText });
       setAnalysisResult(result);
-      setContextResumeAnalysis(result);
+      setContextResumeAnalysis(result); // Save to context
       toast({
         title: 'Resume Analyzed!',
         description: 'Check out your score and feedback below.',
@@ -211,6 +233,10 @@ export default function UploadResumePage() {
   
   const removeSelectedFiles = () => {
     setSelectedFiles(null);
+    setExtractedText(null);
+    setAnalysisResult(null);
+    setContextResumeText(null);
+    setContextResumeAnalysis(null);
     if (fileInputRef.current) {
         fileInputRef.current.value = ""; 
     }
@@ -240,7 +266,7 @@ export default function UploadResumePage() {
             multiple // Allow multiple file selection
           />
           
-          {(!selectedFiles || selectedFiles.length === 0) ? (
+          {(!selectedFiles || selectedFiles.length === 0) && !extractedText ? (
             <Button 
               onClick={triggerFileInput} 
               variant="outline" 
@@ -256,19 +282,25 @@ export default function UploadResumePage() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-2 overflow-hidden">
                   <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                  {selectedFiles.length === 1 ? (
+                  {selectedFiles && selectedFiles.length === 1 ? (
                     <span className="text-sm font-medium truncate" title={selectedFiles[0].name}>
                       {selectedFiles[0].name} ({(selectedFiles[0].size / 1024).toFixed(1)} KB)
                     </span>
-                  ) : (
+                  ) : selectedFiles && selectedFiles.length > 1 ? (
                     <span className="text-sm font-medium">
                       {selectedFiles.length} files selected ({ (selectedFiles.reduce((acc, file) => acc + file.size, 0) / 1024).toFixed(1) } KB total)
                     </span>
+                  ) : extractedText && !selectedFiles ? (
+                     <span className="text-sm font-medium">Using previously uploaded resume text.</span>
+                  ) : (
+                     <span className="text-sm font-medium">No file selected.</span>
                   )}
                 </div>
-                <Button variant="ghost" size="icon" onClick={removeSelectedFiles} disabled={isProcessingFile || isLoadingAnalysis} aria-label="Remove files">
-                  <XCircle className="h-5 w-5 text-destructive hover:text-destructive/80" />
-                </Button>
+                {(selectedFiles || extractedText) && (
+                  <Button variant="ghost" size="icon" onClick={removeSelectedFiles} disabled={isProcessingFile || isLoadingAnalysis} aria-label="Remove files/clear text">
+                    <XCircle className="h-5 w-5 text-destructive hover:text-destructive/80" />
+                  </Button>
+                )}
               </div>
               {isProcessingFile && (
                  <div className="flex items-center text-sm text-primary">
@@ -280,9 +312,15 @@ export default function UploadResumePage() {
                 <Alert variant="default" className="bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700">
                   <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                   <AlertDescription className="text-green-700 dark:text-green-300">
-                    File(s) processed. Ready to analyze.
+                    { selectedFiles ? "File(s) processed." : ""} Resume text available. Ready to analyze or re-upload.
                   </AlertDescription>
                 </Alert>
+              )}
+              {/* Button to re-upload if text is present but no files selected (meaning text came from context) */}
+              {extractedText && !selectedFiles && !isProcessingFile && (
+                <Button onClick={triggerFileInput} variant="outline" size="sm" className="w-full sm:w-auto">
+                    Upload Different File
+                </Button>
               )}
             </div>
           )}
@@ -312,7 +350,7 @@ export default function UploadResumePage() {
                 <CardTitle className="text-lg">Extracted Text Preview (first 500 chars):</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xs text-muted-foreground whitespace-pre-wrap break-all p-2 border rounded-md max-h-40 overflow-y-auto">
+                <p className="text-xs text-muted-foreground whitespace-pre-line break-all p-2 border rounded-md max-h-40 overflow-y-auto">
                   {extractedText.substring(0, 500)}{extractedText.length > 500 ? '...' : ''}
                 </p>
               </CardContent>
@@ -346,8 +384,8 @@ export default function UploadResumePage() {
                 {analysisResult.score < 50 ? "Needs significant improvement." : analysisResult.score < 75 ? "Good start, but room to grow." : "Strong resume!"}
               </p>
             </div>
-            <Alert variant={analysisResult.score < 50 ? "destructive" : analysisResult.score < 75 ? "default": "default"} className={analysisResult.score >= 75 ? "border-green-500" : ""}>
-              {analysisResult.score >= 75 && <CheckCircle className="h-5 w-5 text-green-500" />}
+            <Alert variant={analysisResult.score < 50 ? "destructive" : analysisResult.score < 75 ? "default": "default"} className={analysisResult.score >= 75 ? "border-green-500 bg-green-50 dark:bg-green-900/30" : ""}>
+              {analysisResult.score >= 75 && <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />}
               <AlertTitle className="text-lg font-semibold">Feedback & Suggestions</AlertTitle>
               <AlertDescription className="whitespace-pre-line text-sm leading-relaxed">
                 {analysisResult.feedback}
@@ -366,4 +404,3 @@ const Label = ({ children, className }: { children: React.ReactNode, className?:
     {children}
   </label>
 );
-

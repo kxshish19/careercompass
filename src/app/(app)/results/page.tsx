@@ -6,6 +6,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { aiCareerSuggestions, type AiCareerSuggestionsOutput } from '@/ai/flows/ai-career-suggestions';
 import { generateCareerRoadmap, type CareerRoadmapOutput } from '@/ai/flows/career-roadmap-generator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Alert as UiAlert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Renamed to avoid conflict
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle, Lightbulb, Zap, Route, ThumbsUp, Sparkles, MapPinned } from 'lucide-react';
@@ -28,7 +29,7 @@ export default function ResultsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch suggestions if data is available and not already fetched
+    // Fetch suggestions if data is available and not already fetched from context
     if (resumeText && formattedQuizResults && !careerSuggestionsData && !isLoadingSuggestions) {
       const fetchSuggestions = async () => {
         setIsLoadingSuggestions(true);
@@ -53,11 +54,13 @@ export default function ResultsPage() {
   }, [resumeText, formattedQuizResults, careerSuggestionsData, setCareerSuggestionsData, isLoadingSuggestions, toast]);
 
   useEffect(() => {
-    // Fetch roadmaps if suggestions are available and roadmaps not already fetched
+    // Fetch roadmaps if suggestions are available (either newly fetched or from context)
+    // and roadmaps not already fetched from context
     if (careerSuggestionsData && resumeText && formattedQuizResults && !careerRoadmapsData && !isLoadingRoadmaps) {
       const fetchRoadmaps = async () => {
         setIsLoadingRoadmaps(true);
-        setError(null);
+        // Do not reset general error if suggestions part failed but this part is now trying
+        // setError(null); 
         try {
           const roadmaps = await generateCareerRoadmap({
             careerSuggestions: careerSuggestionsData.careerSuggestions.join(', '),
@@ -68,7 +71,7 @@ export default function ResultsPage() {
            toast({ title: "Career Roadmaps Generated!", description: "Detailed roadmaps are now available.", icon: <MapPinned className="text-blue-500" />});
         } catch (e) {
           console.error('Error fetching career roadmaps:', e);
-          setError((prevError) => prevError ? prevError + ' Failed to load career roadmaps.' : 'Failed to load career roadmaps. Please try again later.');
+          setError((prevError) => (prevError ? prevError + ' ' : '') + 'Failed to load career roadmaps. Please try again later.');
           toast({ variant: "destructive", title: "Error", description: "Could not load career roadmaps." });
         } finally {
           setIsLoadingRoadmaps(false);
@@ -116,7 +119,7 @@ export default function ResultsPage() {
   }
   
   const renderLoadingState = (message: string) => (
-    <Card className="shadow-md">
+    <Card className="shadow-md my-4">
       <CardContent className="pt-6 flex flex-col items-center justify-center space-y-3">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="text-muted-foreground">{message}</p>
@@ -139,13 +142,14 @@ export default function ResultsPage() {
       </Card>
 
       {error && (
-        <Alert variant="destructive">
+        <UiAlert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        </UiAlert>
       )}
 
+      {/* Career Suggestions Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
@@ -154,39 +158,40 @@ export default function ResultsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoadingSuggestions && renderLoadingState("Generating career suggestions...")}
+          {isLoadingSuggestions && !careerSuggestionsData && renderLoadingState("Generating career suggestions...")}
           {!isLoadingSuggestions && careerSuggestionsData && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {careerSuggestionsData.careerSuggestions.map((suggestion, index) => (
                   <Card key={index} className="bg-primary/5 hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg text-primary flex items-center">
-                        <ThumbsUp className="h-5 w-5 mr-2 text-green-500" /> {suggestion}
+                    <CardHeader className="pb-3 pt-4">
+                      <CardTitle className="text-lg text-primary flex items-start">
+                        <ThumbsUp className="h-5 w-5 mr-2 mt-0.5 text-green-500 flex-shrink-0" /> {suggestion}
                       </CardTitle>
                     </CardHeader>
-                     <CardContent>
+                     <CardContent className="pb-4">
                         <Badge variant="secondary">Suggestion {index + 1}</Badge>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-              <Card className="bg-background/50">
+              <Card className="bg-background/50 mt-6">
                 <CardHeader>
                   <CardTitle className="text-xl">Reasoning Behind Suggestions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-foreground/90 whitespace-pre-line">{careerSuggestionsData.reasoning}</p>
+                  <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">{careerSuggestionsData.reasoning}</p>
                 </CardContent>
               </Card>
             </div>
           )}
           {!isLoadingSuggestions && !careerSuggestionsData && !error && (
-            <p className="text-muted-foreground">No suggestions available yet. Ensure your resume and quiz are completed.</p>
+            <p className="text-muted-foreground">No suggestions available yet. Ensure your resume and quiz are completed and there were no errors.</p>
           )}
         </CardContent>
       </Card>
 
+      {/* Career Roadmaps Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
@@ -195,14 +200,14 @@ export default function ResultsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoadingRoadmaps && renderLoadingState("Generating career roadmaps...")}
+          {isLoadingRoadmaps && !careerRoadmapsData && renderLoadingState("Generating career roadmaps...")}
           {!isLoadingRoadmaps && careerRoadmapsData && (
             <Accordion type="single" collapsible className="w-full space-y-3">
               {careerRoadmapsData.roadmaps.map((roadmapItem, index) => (
                 <AccordionItem value={`item-${index}`} key={index} className="border border-input rounded-lg bg-card hover:border-primary/50 transition-colors">
-                  <AccordionTrigger className="p-4 text-lg font-semibold hover:no-underline">
+                  <AccordionTrigger className="p-4 text-lg font-semibold hover:no-underline text-left">
                     <div className="flex items-center">
-                        <Sparkles className="h-5 w-5 mr-3 text-yellow-500" />
+                        <Sparkles className="h-5 w-5 mr-3 text-yellow-500 flex-shrink-0" />
                         Roadmap for: {roadmapItem.career}
                     </div>
                   </AccordionTrigger>
@@ -213,8 +218,11 @@ export default function ResultsPage() {
               ))}
             </Accordion>
           )}
-          {!isLoadingRoadmaps && !careerRoadmapsData && !error && (
-             <p className="text-muted-foreground">Roadmaps will appear here once career suggestions are generated.</p>
+          {!isLoadingRoadmaps && !careerRoadmapsData && !error && careerSuggestionsData && (
+             <p className="text-muted-foreground">Roadmaps will appear here once generated. If suggestions are loaded, roadmaps might still be processing or encountered an issue.</p>
+          )}
+           {!isLoadingRoadmaps && !careerRoadmapsData && !error && !careerSuggestionsData && (
+             <p className="text-muted-foreground">Roadmaps will appear here once career suggestions are generated first.</p>
           )}
         </CardContent>
       </Card>

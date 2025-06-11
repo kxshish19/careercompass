@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { FileText, Lightbulb, Zap, Route, Brain } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface FeatureCardProps {
   title: string;
@@ -43,31 +42,20 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <Card className="shadow-xl overflow-hidden">
-        <div className="grid md:grid-cols-2 items-center">
-          <div className="p-8 space-y-4">
-            <CardTitle className="text-3xl font-headline md:text-4xl">
-              Welcome, {user?.name || 'Explorer'}!
-            </CardTitle>
-            <CardDescription className="text-base md:text-lg text-foreground/80">
-              You're on your way to charting a brilliant career path. Use the tools below to gain insights and plan your next steps.
-            </CardDescription>
-            <div className="flex space-x-2 pt-2">
-                <Button asChild size="lg">
-                    <Link href="/upload-resume">Upload Your Resume</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                    <Link href="/quiz">Take Personality Quiz</Link>
-                </Button>
-            </div>
-          </div>
-          <div className="hidden md:block relative h-64 md:h-full">
-            <Image 
-              src="https://placehold.co/600x400.png" 
-              alt="Career illustration" 
-              data-ai-hint="abstract career path"
-              layout="fill" 
-              objectFit="cover"
-            />
+        <div className="p-8 space-y-4">
+          <CardTitle className="text-3xl font-headline md:text-4xl">
+            Welcome, {user?.name || 'Explorer'}!
+          </CardTitle>
+          <CardDescription className="text-base md:text-lg text-foreground/80">
+            You're on your way to charting a brilliant career path. Use the tools below to gain insights and plan your next steps.
+          </CardDescription>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 pt-2">
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                  <Link href="/upload-resume">Upload Your Resume</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Link href="/quiz">Take Personality Quiz</Link>
+              </Button>
           </div>
         </div>
       </Card>

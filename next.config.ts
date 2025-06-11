@@ -8,16 +8,17 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
+  // Removing image configuration as images are no longer used.
+  // images: {
+  //   remotePatterns: [
+  //     {
+  //       protocol: 'https',
+  //       hostname: 'placehold.co',
+  //       port: '',
+  //       pathname: '/**',
+  //     },
+  //   ],
+  // },
 };
 
 export default nextConfig;
