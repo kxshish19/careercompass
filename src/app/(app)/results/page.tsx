@@ -74,7 +74,7 @@ export default function ResultsPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInputValue, setChatInputValue] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const chatScrollAreaRef = useRef<HTMLDivElement>(null);
+  const chatScrollAreaViewportRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
 
@@ -127,12 +127,11 @@ export default function ResultsPage() {
   }, [careerSuggestionsData, resumeText, formattedQuizResults, careerRoadmapsData, setCareerRoadmapsData, isLoadingRoadmaps, toast, error]);
 
   useEffect(() => {
-    if (chatScrollAreaRef.current) {
-      chatScrollAreaRef.current.scrollTo({ top: chatScrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+    if (chatScrollAreaViewportRef.current) {
+      chatScrollAreaViewportRef.current.scrollTo({ top: chatScrollAreaViewportRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [chatMessages]);
 
-  // Add initial AI welcome message after results are loaded and chat is empty
   useEffect(() => {
     if (
       chatMessages.length === 0 &&
@@ -150,8 +149,7 @@ export default function ResultsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [careerSuggestionsData, careerRoadmapsData, isLoadingSuggestions, isLoadingRoadmaps, isChatLoading]);
-  // Note: chatMessages is intentionally omitted from dependencies here to ensure this effect runs
-  // primarily when the supporting data loads and the chat is empty, avoiding loops.
+
 
   const handleSendChatMessage = async () => {
     if (!chatInputValue.trim()) return;
@@ -385,7 +383,6 @@ export default function ResultsPage() {
         </CardContent>
       </Card>
 
-      {/* AI Chatbot Section */}
       {(careerSuggestionsData || careerRoadmapsData) && (
         <Card className="shadow-lg">
           <CardHeader>
@@ -396,7 +393,7 @@ export default function ResultsPage() {
             <CardDescription>Ask follow-up questions or get more advice based on your results.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-72 w-full rounded-md border p-4 mb-4" ref={chatScrollAreaRef}>
+            <ScrollArea className="h-72 w-full rounded-md border p-4 mb-4" viewportRef={chatScrollAreaViewportRef}>
               {chatMessages.length === 0 && !isChatLoading && (
                 <p className="text-sm text-muted-foreground text-center py-4">Ask a question to get started!</p>
               )}
@@ -443,4 +440,3 @@ export default function ResultsPage() {
     </div>
   );
 }
-
