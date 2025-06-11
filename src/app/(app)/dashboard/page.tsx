@@ -1,11 +1,10 @@
-
 // src/app/(app)/dashboard/page.tsx
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, FileText, Lightbulb, Zap, Route, Briefcase } from 'lucide-react';
+import { FileText, Lightbulb, Zap, Route, Briefcase, Brain } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -65,9 +64,9 @@ export default function DashboardPage() {
             <Image 
               src="https://placehold.co/600x400.png" 
               alt="Career illustration" 
+              data-ai-hint="abstract career path"
               layout="fill" 
               objectFit="cover"
-              data-ai-hint="abstract career path"
             />
           </div>
         </div>
@@ -125,8 +124,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-// Placeholder icons if not already defined:
-// const Brain = ({ className }: { className?: string }) => <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.871 7.702c0-1.29.932-2.404 2.221-2.632.96-.17 1.905.016 2.716.518M4.871 7.702V10.5m0-2.798S3 7.21 3 9.362c0 2.152 1.871 4.436 1.871 4.436m0-6.636V4.5m0 6.136c0 1.29-.932 2.404-2.221 2.632-.96.17-1.905-.016-2.716-.518m16.258-4.436c0-1.29-.932-2.404-2.221-2.632-.96-.17-1.905.016-2.716.518m2.221 2.014V10.5m0-2.798s1.871-.492 1.871 1.66c0 2.152-1.871 4.436-1.871 4.436m0-6.636V4.5m0 6.136c0 1.29.932 2.404 2.221 2.632.96.17 1.905-.016 2.716-.518M9 12a3 3 0 11-6 0 3 3 0 016 0zm12 0a3 3 0 11-6 0 3 3 0 016 0zM9 12V9m6 3V9m-3 6.965A2.992 2.992 0 0112 15a2.992 2.992 0 01-3 .965m0 0V12m3 3.965V12m0 0a2.001 2.001 0 00-1.414-1.932C10.02 9.778 9.075 9.592 8.114 9.422 6.512 9.14 5 9.776 5 11.298c0 .285.223.518.5.518h13c.277 0 .5-.233.5-.518 0-1.522-1.512-2.158-3.114-2.436-.96-.17-1.905.016-2.716.518A2.001 2.001 0 0012 12z" /></svg>;
-
-```
