@@ -4,7 +4,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Lightbulb, Zap, Route, Briefcase, Brain } from 'lucide-react';
+import { FileText, Lightbulb, Zap, Route, Brain } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -112,13 +112,6 @@ export default function DashboardPage() {
           icon={Brain}
           href="/results"
           cta="Get Suggestions"
-        />
-         <FeatureCard
-          title="General Career Tools"
-          description="Access a suite of tools and resources designed to support your professional journey and development."
-          icon={Briefcase}
-          href="/results" 
-          cta="Discover Tools"
         />
       </div>
     </div>
