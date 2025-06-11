@@ -18,8 +18,9 @@ import Tesseract from 'tesseract.js';
 
 // Setting worker path for pdfjs-dist
 if (typeof window !== 'undefined') {
-  const PDFJS_WORKER_VERSION = '4.3.136'; 
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_WORKER_VERSION}/pdf.worker.min.js`;
+  const detectedPdfJsVersion = pdfjsLib.version;
+  // Use the .mjs version for "dynamically imported module" and ensure https protocol
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${detectedPdfJsVersion}/pdf.worker.mjs`;
 }
 
 const MINIMAL_TEXT_LENGTH_THRESHOLD = 100; // Characters
@@ -365,3 +366,4 @@ const Label = ({ children, className }: { children: React.ReactNode, className?:
     {children}
   </label>
 );
+
