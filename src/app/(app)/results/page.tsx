@@ -2,17 +2,20 @@
 // src/app/(app)/results/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { aiCareerSuggestions } from '@/ai/flows/ai-career-suggestions';
-import { generateCareerRoadmap, type CareerRoadmapOutput } from '@/ai/flows/career-roadmap-generator';
+import { generateCareerRoadmap, type CareerRoadmapOutput, type CareerRoadmapInput } from '@/ai/flows/career-roadmap-generator';
+import { careerHelpChat, type CareerHelpChatInput, type CareerHelpChatOutput } from '@/ai/flows/career-chat-flow';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert as UiAlert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
     Loader2, AlertCircle, Lightbulb, Zap, Route, ThumbsUp, Sparkles, MapPinned, 
-    ListChecks, Target, BookOpen, Users, Clock, ArrowRightCircle 
+    ListChecks, Target, BookOpen, Users, Clock, ArrowRightCircle, MessageCircle, SendHorizonal, User, Bot
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -49,6 +52,12 @@ const RoadmapSection: React.FC<RoadmapSectionProps> = ({ title, icon: Icon, item
   );
 };
 
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'model';
+  content: string;
+}
+
 
 export default function ResultsPage() {
   const { 
@@ -61,6 +70,11 @@ export default function ResultsPage() {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInputValue, setChatInputValue] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const chatScrollAreaRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
 
@@ -97,7 +111,7 @@ export default function ResultsPage() {
             careerSuggestions: careerSuggestionsData.careerSuggestions.join(', '),
             resumeContent: resumeText,
             personalityQuizResults: formattedQuizResults,
-          });
+          } as CareerRoadmapInput); // Cast to satisfy type, actual schema matches
           setCareerRoadmapsData(roadmaps);
            toast({ title: "Career Roadmaps Generated!", description: "Detailed roadmaps are now available."});
         } catch (e) {
@@ -111,6 +125,60 @@ export default function ResultsPage() {
       fetchRoadmaps();
     }
   }, [careerSuggestionsData, resumeText, formattedQuizResults, careerRoadmapsData, setCareerRoadmapsData, isLoadingRoadmaps, toast]);
+
+  useEffect(() => {
+    if (chatScrollAreaRef.current) {
+      chatScrollAreaRef.current.scrollTo({ top: chatScrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [chatMessages]);
+
+  const handleSendChatMessage = async () => {
+    if (!chatInputValue.trim()) return;
+
+    const newUserMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: chatInputValue.trim(),
+    };
+    setChatMessages((prev) => [...prev, newUserMessage]);
+    setChatInputValue('');
+    setIsChatLoading(true);
+
+    try {
+      const roadmapsSummary = careerRoadmapsData?.roadmaps.map(r => `${r.career}: ${r.details.introduction.substring(0,100)}...`).join('\n') || undefined;
+
+      const chatInput: CareerHelpChatInput = {
+        chatHistory: chatMessages.map(m => ({role: m.role, content: m.content})), // Transform to match schema
+        currentMessage: newUserMessage.content,
+        resumeText: resumeText || undefined,
+        quizResults: formattedQuizResults || undefined,
+        careerSuggestions: careerSuggestionsData?.careerSuggestions || undefined,
+        careerRoadmapsSummary: roadmapsSummary,
+      };
+
+      const response: CareerHelpChatOutput = await careerHelpChat(chatInput);
+      
+      const aiMessage: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        role: 'model',
+        content: response.aiResponse,
+      };
+      setChatMessages((prev) => [...prev, aiMessage]);
+
+    } catch (e) {
+      console.error('Error in chat:', e);
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'model',
+        content: "Sorry, I couldn't process your message right now. Please try again.",
+      };
+      setChatMessages((prev) => [...prev, errorMessage]);
+      toast({ variant: "destructive", title: "Chat Error", description: "Could not get AI response." });
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
 
   const MissingPrerequisites = () => (
     <Card className="shadow-lg">
@@ -295,7 +363,62 @@ export default function ResultsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* AI Chatbot Section */}
+      {(careerSuggestionsData || careerRoadmapsData) && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <div className="flex items-center space-x-3">
+              <MessageCircle className="h-7 w-7 text-primary" />
+              <CardTitle className="text-2xl font-headline">Career Help Chatbot</CardTitle>
+            </div>
+            <CardDescription>Ask follow-up questions or get more advice based on your results.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-72 w-full rounded-md border p-4 mb-4" ref={chatScrollAreaRef}>
+              {chatMessages.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No messages yet. Ask a question to get started!</p>
+              )}
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "mb-3 flex items-start gap-3 p-3 rounded-lg max-w-[85%]",
+                    message.role === 'user' ? 'ml-auto bg-primary/10 flex-row-reverse' : 'mr-auto bg-muted'
+                  )}
+                >
+                  {message.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />}
+                  {message.role === 'user' && <User className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />}
+                  <p className="text-sm whitespace-pre-line leading-relaxed">{message.content}</p>
+                </div>
+              ))}
+              {isChatLoading && (
+                <div className="flex items-center justify-start gap-2 p-3 text-muted-foreground">
+                  <Bot className="h-6 w-6 text-primary animate-pulse" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>AI is typing...</span>
+                </div>
+              )}
+            </ScrollArea>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="text"
+                placeholder="Ask a question about your career..."
+                value={chatInputValue}
+                onChange={(e) => setChatInputValue(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !isChatLoading && handleSendChatMessage()}
+                disabled={isChatLoading}
+                className="flex-grow"
+              />
+              <Button onClick={handleSendChatMessage} disabled={isChatLoading || !chatInputValue.trim()} size="icon">
+                {isChatLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizonal className="h-5 w-5" />}
+                <span className="sr-only">Send</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }
-

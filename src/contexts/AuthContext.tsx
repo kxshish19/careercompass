@@ -1,3 +1,4 @@
+
 // src/contexts/AuthContext.tsx
 'use client';
 import type { ReactNode } from 'react';
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('careerCompassUser');
-    router.push('/login');
+    router.push('/'); // Changed to redirect to homepage
   };
 
   return (
