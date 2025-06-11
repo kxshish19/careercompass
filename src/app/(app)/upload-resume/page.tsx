@@ -1,3 +1,4 @@
+
 // src/app/(app)/upload-resume/page.tsx
 'use client';
 
@@ -17,7 +18,9 @@ import Tesseract from 'tesseract.js';
 
 // Setting worker path for pdfjs-dist
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  // Use a specific version string matching package.json dependency if pdfjsLib.version is problematic
+  const PDFJS_WORKER_VERSION = '4.3.136'; 
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_WORKER_VERSION}/pdf.worker.min.js`;
 }
 
 export default function UploadResumePage() {
@@ -273,3 +276,4 @@ const Label = ({ children, className }: { children: React.ReactNode, className?:
     {children}
   </label>
 );
+
