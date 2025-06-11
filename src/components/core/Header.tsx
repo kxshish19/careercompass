@@ -1,14 +1,28 @@
+
 // src/components/core/Header.tsx
 'use client';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
-import { Compass, LogOut } from 'lucide-react';
+import { Compass, LogOut, Trash2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { ThemeToggleButton } from './ThemeToggleButton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Header() {
   const { user, logout } = useAuth();
+  const { clearUserCacheAndResetState } = useAppContext();
   const pathname = usePathname();
 
   const navLinks = [
@@ -46,9 +60,33 @@ export default function Header() {
             </span>
           )}
           <ThemeToggleButton />
+          {user && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Trash2 className="mr-0 sm:mr-2 h-4 w-4" /> 
+                  <span className="hidden sm:inline">Reset Data</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will permanently delete all your cached application data (resume, quiz answers, AI results) for the account '{user.email}' from this browser. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearUserCacheAndResetState}>
+                    Yes, Reset My Data
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           <Button variant="outline" size="sm" onClick={logout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
+            <LogOut className="mr-0 sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Logout</span>
           </Button>
         </div>
       </div>
