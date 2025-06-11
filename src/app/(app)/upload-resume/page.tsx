@@ -7,23 +7,104 @@ import { useAppContext } from '@/contexts/AppContext';
 import { resumeGrader, type ResumeGraderOutput } from '@/ai/flows/resume-grader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FileText, Send, Loader2, CheckCircle, AlertCircle, FileUp, XCircle } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { 
+    FileText, Send, Loader2, CheckCircle, AlertCircle, FileUp, XCircle, 
+    Sparkles, Lightbulb, TrendingUp, CheckSquare, BarChart3, Bot, ListChecks, ThumbsUp, ThumbsDown
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import Tesseract from 'tesseract.js';
+import { Badge } from '@/components/ui/badge';
 
-// Setting worker path for pdfjs-dist
 if (typeof window !== 'undefined') {
   const detectedPdfJsVersion = pdfjsLib.version;
-  // Use the .mjs version for "dynamically imported module" and ensure https protocol
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${detectedPdfJsVersion}/pdf.worker.mjs`;
 }
 
 const MINIMAL_TEXT_LENGTH_THRESHOLD = 100; // Characters
+
+const getScoreColor = (score?: number): string => {
+    if (score === undefined) return 'text-muted-foreground';
+    if (score >= 80) return 'text-green-600 dark:text-green-400';
+    if (score >= 60) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
+};
+
+const getProgressVariant = (score?: number): "default" | "success" | "warning" | "danger" => {
+    if (score === undefined) return 'default';
+    if (score >= 80) return 'success';
+    if (score >= 60) return 'warning';
+    return 'danger';
+};
+
+// Custom Progress component to handle color variants
+const ColoredProgress = ({ value, variant }: { value: number; variant: "default" | "success" | "warning" | "danger" }) => {
+  let colorClass = "bg-primary"; // Default
+  if (variant === "success") colorClass = "bg-green-500";
+  if (variant === "warning") colorClass = "bg-yellow-500";
+  if (variant === "danger") colorClass = "bg-red-500";
+
+  return (
+    <ProgressPrimitive.Root
+      className={cn("relative h-4 w-full overflow-hidden rounded-full bg-secondary")}
+    >
+      <ProgressPrimitive.Indicator
+        className={cn("h-full w-full flex-1 transition-all", colorClass)}
+        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      />
+    </ProgressPrimitive.Root>
+  );
+};
+import * as ProgressPrimitive from "@radix-ui/react-progress"
+import { cn } from "@/lib/utils"
+
+
+interface AnalysisSectionProps {
+  title: string;
+  icon: React.ElementType;
+  score?: number;
+  feedback: string;
+  suggestions?: string[];
+  defaultOpen?: boolean;
+}
+
+const AnalysisSectionCard: React.FC<AnalysisSectionProps> = ({ title, icon: Icon, score, feedback, suggestions, defaultOpen }) => {
+  const scoreColor = getScoreColor(score);
+  return (
+    <AccordionItem value={title.toLowerCase().replace(/\s+/g, '-')} className="border border-input rounded-lg bg-card hover:border-primary/50 transition-colors">
+      <AccordionTrigger className="p-4 text-lg font-semibold hover:no-underline">
+        <div className="flex items-center">
+          <Icon className={`h-6 w-6 mr-3 ${score !== undefined ? scoreColor : 'text-primary'} flex-shrink-0`} />
+          {title} 
+          {score !== undefined && (
+            <Badge variant={score >= 80 ? 'default' : score >= 60 ? 'secondary' : 'destructive'} className={`ml-3 ${scoreColor} border ${scoreColor.replace('text-', 'border-')}`}>
+              Score: {score}/100
+            </Badge>
+          )}
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="p-4 pt-0 space-y-3">
+        <p className="whitespace-pre-line text-sm text-foreground/90 leading-relaxed">{feedback}</p>
+        {suggestions && suggestions.length > 0 && (
+          <div className="mt-2">
+            <h4 className="font-semibold text-sm mb-1">Suggestions:</h4>
+            <ul className="list-disc list-inside space-y-1 text-sm text-foreground/80 pl-4">
+              {suggestions.map((suggestion, index) => (
+                <li key={index}>{suggestion}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </AccordionContent>
+    </AccordionItem>
+  );
+};
+
 
 export default function UploadResumePage() {
   const { 
@@ -43,26 +124,12 @@ export default function UploadResumePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Sync with context if initial data is available
-    if (initialResumeText && !extractedText) {
-      setExtractedText(initialResumeText);
-    }
-    if (initialResumeAnalysis && !analysisResult) {
-      setAnalysisResult(initialResumeAnalysis);
-    }
+    if (initialResumeText && !extractedText) setExtractedText(initialResumeText);
+    if (initialResumeAnalysis && !analysisResult) setAnalysisResult(initialResumeAnalysis);
   }, [initialResumeText, initialResumeAnalysis, extractedText, analysisResult]);
 
-
-  useEffect(() => {
-    // Clear results if files are removed or selection is empty
-    if (!selectedFiles || selectedFiles.length === 0) {
-      // Only clear if the user actively removes files, not on initial load if context has data
-      // This logic might need refinement based on desired UX for file re-selection
-    }
-  }, [selectedFiles]);
-
-  // Helper function to process a single file (PDF, DOCX, or Image)
   async function processSingleFile(file: File): Promise<string> {
+    // ... (keep existing processSingleFile logic, no change here)
     let text = '';
     if (file.type === 'application/pdf') {
       const arrayBuffer = await file.arrayBuffer();
@@ -90,7 +157,7 @@ export default function UploadResumePage() {
             const imageDataUrl = canvas.toDataURL('image/png');
             toast({ title: `OCR on PDF Page ${i}/${pdf.numPages}...`});
             const { data: { text: pageOcrText } } = await Tesseract.recognize(imageDataUrl, 'eng');
-            ocrTextFromPdf += pageOcrText + '\n\n'; // Add separator
+            ocrTextFromPdf += pageOcrText + '\n\n'; 
           } else {
              console.error('Could not get canvas context for PDF page OCR');
              toast({ variant: 'destructive', title: `OCR Error on Page ${i}`, description: 'Could not prepare page for OCR.' });
@@ -113,17 +180,17 @@ export default function UploadResumePage() {
       text = ocrText;
     } else {
       toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload a PDF, DOCX, JPG, or PNG file.' });
-      return ''; // Return empty for unsupported type
+      return '';
     }
     return text;
   }
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    // ... (keep existing handleFileChange logic, no change here)
     const files = event.target.files;
     if (files && files.length > 0) {
       const fileList = Array.from(files);
       setSelectedFiles(fileList);
-      // Reset previous state when new files are selected
       setExtractedText(null); 
       setContextResumeText(null);
       setAnalysisResult(null); 
@@ -137,12 +204,10 @@ export default function UploadResumePage() {
           toast({ title: 'Processing File...', description: `Extracting text from ${file.name}.` });
           combinedText = await processSingleFile(file);
         } else {
-          // Multiple files selected
           const allImages = fileList.every(f => f.type.startsWith('image/'));
           if (!allImages) {
             toast({ variant: 'destructive', title: 'Unsupported Selection', description: 'If selecting multiple files, all must be images. Please upload PDF/DOCX as single files.' });
-            setSelectedFiles(null); // Clear invalid selection
-            // No early return, finally block will still run
+            setSelectedFiles(null);
           } else {
             toast({ title: 'Processing Multiple Images...', description: `Extracting text from ${fileList.length} images. This may take some time.` });
             for (let i = 0; i < fileList.length; i++) {
@@ -150,7 +215,7 @@ export default function UploadResumePage() {
               toast({ title: `Processing Image ${i + 1}/${fileList.length}...`, description: file.name });
               try {
                 const { data: { text: ocrText } } = await Tesseract.recognize(file, 'eng');
-                combinedText += ocrText + '\n\n'; // Add separator between pages
+                combinedText += ocrText + '\n\n'; 
               } catch (ocrError) {
                 console.error(`Error OCRing image ${file.name}:`, ocrError);
                 toast({ variant: 'destructive', title: `OCR Error on ${file.name}`, description: 'Could not extract text from this image.' });
@@ -167,24 +232,18 @@ export default function UploadResumePage() {
           setContextResumeText(combinedText); 
           toast({ title: 'File(s) Processed', description: 'Resume text extracted successfully. Ready for analysis.' });
         } else if (selectedFiles && selectedFiles.length > 0 && !(fileList.length > 1 && !fileList.every(f => f.type.startsWith('image/')))) { 
-           // If files were selected but resulted in no text, and it wasn't an unsupported multi-select error already handled
            toast({ variant: 'default', title: 'No Text Found', description: 'No text content could be extracted or content was minimal.'});
-           // Don't clear selectedFiles here, user might want to try analyzing with what was (not) extracted or re-upload
         }
 
       } catch (error) {
         console.error('Error processing file(s):', error);
         toast({ variant: 'destructive', title: 'File Processing Error', description: 'Could not read text from the file(s). Check console for details.' });
-        setSelectedFiles(null); // Clear selection on major error
+        setSelectedFiles(null); 
       } finally {
         setIsProcessingFile(false);
-        // Do not clear fileInputRef.current.value here if we want to keep the selection visible
-        // However, if we always want to allow re-selection of the same file, clearing it is fine.
-        // For now, let's leave it to allow users to see what they selected.
       }
     } else {
-      setSelectedFiles(null); // No files selected or input cleared
-      // Clear context if no files are selected
+      setSelectedFiles(null); 
       setExtractedText(null); 
       setContextResumeText(null);
       setAnalysisResult(null); 
@@ -194,42 +253,26 @@ export default function UploadResumePage() {
 
   const handleAnalyzeResume = async () => {
     if (!extractedText) {
-      toast({
-        variant: 'destructive',
-        title: 'No Resume Text',
-        description: 'Please upload and process a resume file first, or ensure the file was read correctly.',
-      });
+      toast({ variant: 'destructive', title: 'No Resume Text', description: 'Please upload and process a resume file first, or ensure the file was read correctly.' });
       return;
     }
-
     setIsLoadingAnalysis(true);
-    setAnalysisResult(null); // Clear previous analysis before new one
+    setAnalysisResult(null); 
     setContextResumeAnalysis(null); 
     try {
       const result = await resumeGrader({ resumeText: extractedText });
       setAnalysisResult(result);
-      setContextResumeAnalysis(result); // Save to context
-      toast({
-        title: 'Resume Analyzed!',
-        description: 'Check out your score and feedback below.',
-        action: <CheckCircle className="text-green-500" />,
-      });
+      setContextResumeAnalysis(result); 
+      toast({ title: 'Resume Analyzed!', description: 'Check out your detailed report below.', action: <CheckCircle className="text-green-500" /> });
     } catch (error) {
       console.error('Error analyzing resume:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Analysis Failed',
-        description: 'Could not analyze the resume. Please try again.',
-        action: <AlertCircle className="text-red-500" />,
-      });
+      toast({ variant: 'destructive', title: 'Analysis Failed', description: 'Could not analyze the resume. Please try again.', action: <AlertCircle className="text-red-500" /> });
     } finally {
       setIsLoadingAnalysis(false);
     }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
+  const triggerFileInput = () => fileInputRef.current?.click();
   
   const removeSelectedFiles = () => {
     setSelectedFiles(null);
@@ -237,9 +280,7 @@ export default function UploadResumePage() {
     setAnalysisResult(null);
     setContextResumeText(null);
     setContextResumeAnalysis(null);
-    if (fileInputRef.current) {
-        fileInputRef.current.value = ""; 
-    }
+    if (fileInputRef.current) fileInputRef.current.value = ""; 
   };
 
   return (
@@ -248,31 +289,17 @@ export default function UploadResumePage() {
         <CardHeader>
           <div className="flex items-center space-x-3 mb-2">
             <FileText className="h-8 w-8 text-primary" />
-            <CardTitle className="text-3xl font-headline">Resume Analyzer</CardTitle>
+            <CardTitle className="text-3xl font-headline">Resume Analyzer Pro</CardTitle>
           </div>
           <CardDescription className="text-base">
-            Upload your resume (PDF, DOCX, JPG, PNG). Multiple images can be selected for a multi-page image resume.
-            If a PDF contains mostly images, OCR will be attempted on each page.
+            Upload your resume (PDF, DOCX, JPG, PNG). Get a detailed, categorized analysis including ATS friendliness.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept=".pdf,.docx,image/jpeg,image/png"
-            disabled={isProcessingFile || isLoadingAnalysis}
-            multiple // Allow multiple file selection
-          />
+          <Input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.docx,image/jpeg,image/png" disabled={isProcessingFile || isLoadingAnalysis} multiple />
           
           {(!selectedFiles || selectedFiles.length === 0) && !extractedText ? (
-            <Button 
-              onClick={triggerFileInput} 
-              variant="outline" 
-              className="w-full border-dashed border-2 py-10 flex-col h-auto"
-              disabled={isProcessingFile || isLoadingAnalysis}
-            >
+            <Button onClick={triggerFileInput} variant="outline" className="w-full border-dashed border-2 py-10 flex-col h-auto" disabled={isProcessingFile || isLoadingAnalysis}>
               <FileUp className="h-10 w-10 text-muted-foreground mb-2" />
               <span className="font-semibold text-primary">Click to upload your resume</span>
               <span className="text-sm text-muted-foreground">PDF, DOCX, JPG, PNG (single or multiple images)</span>
@@ -292,9 +319,7 @@ export default function UploadResumePage() {
                     </span>
                   ) : extractedText && !selectedFiles ? (
                      <span className="text-sm font-medium">Using previously uploaded resume text.</span>
-                  ) : (
-                     <span className="text-sm font-medium">No file selected.</span>
-                  )}
+                  ) : ( <span className="text-sm font-medium">No file selected.</span> )}
                 </div>
                 {(selectedFiles || extractedText) && (
                   <Button variant="ghost" size="icon" onClick={removeSelectedFiles} disabled={isProcessingFile || isLoadingAnalysis} aria-label="Remove files/clear text">
@@ -302,12 +327,7 @@ export default function UploadResumePage() {
                   </Button>
                 )}
               </div>
-              {isProcessingFile && (
-                 <div className="flex items-center text-sm text-primary">
-                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                   Processing file(s)... This may take some time.
-                 </div>
-              )}
+              {isProcessingFile && ( <div className="flex items-center text-sm text-primary"> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing file(s)... This may take some time. </div> )}
                {extractedText && !isProcessingFile && (
                 <Alert variant="default" className="bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700">
                   <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -316,39 +336,19 @@ export default function UploadResumePage() {
                   </AlertDescription>
                 </Alert>
               )}
-              {/* Button to re-upload if text is present but no files selected (meaning text came from context) */}
               {extractedText && !selectedFiles && !isProcessingFile && (
-                <Button onClick={triggerFileInput} variant="outline" size="sm" className="w-full sm:w-auto">
-                    Upload Different File
-                </Button>
+                <Button onClick={triggerFileInput} variant="outline" size="sm" className="w-full sm:w-auto"> Upload Different File </Button>
               )}
             </div>
           )}
 
-          <Button 
-            onClick={handleAnalyzeResume} 
-            disabled={isProcessingFile || isLoadingAnalysis || !extractedText} 
-            className="w-full sm:w-auto"
-            size="lg"
-          >
-            {isLoadingAnalysis ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Send className="mr-2 h-5 w-5" />
-                Analyze Resume
-              </>
-            )}
+          <Button onClick={handleAnalyzeResume} disabled={isProcessingFile || isLoadingAnalysis || !extractedText} className="w-full sm:w-auto" size="lg">
+            {isLoadingAnalysis ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Analyzing...</>) : (<><Send className="mr-2 h-5 w-5" />Analyze Resume</>)}
           </Button>
 
           {extractedText && !isProcessingFile && (
             <Card className="bg-background/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Extracted Text Preview (first 500 chars):</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">Extracted Text Preview (first 500 chars):</CardTitle></CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground whitespace-pre-line break-all p-2 border rounded-md max-h-40 overflow-y-auto">
                   {extractedText.substring(0, 500)}{extractedText.length > 500 ? '...' : ''}
@@ -356,41 +356,118 @@ export default function UploadResumePage() {
               </CardContent>
             </Card>
           )}
-
         </CardContent>
       </Card>
 
-      {(isLoadingAnalysis || (isProcessingFile && (!selectedFiles || selectedFiles.length === 0) )) && ( 
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-2 text-muted-foreground">
-              {isProcessingFile && (!selectedFiles || selectedFiles.length === 0) ? "Waiting for file selection..." : isLoadingAnalysis ? "Analyzing your resume, please wait..." : "Processing file(s)..."}
-            </p>
-          </CardContent>
-        </Card>
+      {isLoadingAnalysis && ( 
+        <Card><CardContent className="pt-6 text-center"><Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" /><p className="mt-2 text-muted-foreground">Analyzing your resume, please wait...</p></CardContent></Card>
       )}
 
       {analysisResult && !isLoadingAnalysis && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline text-primary">Analysis Results</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-lg font-semibold">Overall Score: {analysisResult.score}/100</Label>
-              <Progress value={analysisResult.score} className="mt-2 h-4 rounded-full" />
-               <p className="text-xs text-muted-foreground mt-1">
-                {analysisResult.score < 50 ? "Needs significant improvement." : analysisResult.score < 75 ? "Good start, but room to grow." : "Strong resume!"}
-              </p>
+        <Card className="shadow-xl">
+          <CardHeader className="border-b">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <CardTitle className="text-3xl font-headline text-primary mb-1">Resume Analysis Report</CardTitle>
+                    <CardDescription className="text-base">Detailed insights into your resume's effectiveness.</CardDescription>
+                </div>
+                <div className="text-right">
+                    <p className="text-lg font-semibold">Overall Score:</p>
+                    <p className={`text-5xl font-bold ${getScoreColor(analysisResult.overallScore)}`}>{analysisResult.overallScore}<span className="text-2xl">/100</span></p>
+                </div>
             </div>
-            <Alert variant={analysisResult.score < 50 ? "destructive" : analysisResult.score < 75 ? "default": "default"} className={analysisResult.score >= 75 ? "border-green-500 bg-green-50 dark:bg-green-900/30" : ""}>
-              {analysisResult.score >= 75 && <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />}
-              <AlertTitle className="text-lg font-semibold">Feedback & Suggestions</AlertTitle>
-              <AlertDescription className="whitespace-pre-line text-sm leading-relaxed">
-                {analysisResult.feedback}
-              </AlertDescription>
+             <div className="mt-2">
+                <ColoredProgress value={analysisResult.overallScore} variant={getProgressVariant(analysisResult.overallScore)} />
+             </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <Alert className={cn("border-l-4", 
+                analysisResult.overallScore >= 80 ? "border-green-500 bg-green-50 dark:bg-green-900/30" : 
+                analysisResult.overallScore >= 60 ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30" : 
+                "border-red-500 bg-red-50 dark:bg-red-900/30"
+            )}>
+              <Sparkles className={cn("h-5 w-5", 
+                analysisResult.overallScore >= 80 ? "text-green-600" : 
+                analysisResult.overallScore >= 60 ? "text-yellow-600" : 
+                "text-red-600"
+              )} />
+              <AlertTitle className="font-semibold text-lg">Summary</AlertTitle>
+              <AlertDescription className="whitespace-pre-line text-sm leading-relaxed">{analysisResult.summary}</AlertDescription>
             </Alert>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                {analysisResult.positivePoints && analysisResult.positivePoints.length > 0 && (
+                    <Card className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-xl flex items-center text-green-700 dark:text-green-300">
+                                <ThumbsUp className="mr-2 h-5 w-5"/> Positive Points
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-green-800 dark:text-green-200">
+                                {analysisResult.positivePoints.map((point, index) => <li key={index}>{point}</li>)}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+                {analysisResult.areasForImprovement && analysisResult.areasForImprovement.length > 0 && (
+                     <Card className="bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-xl flex items-center text-yellow-700 dark:text-yellow-300">
+                                <ThumbsDown className="mr-2 h-5 w-5"/> Areas for Improvement
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-yellow-800 dark:text-yellow-200">
+                                {analysisResult.areasForImprovement.map((area, index) => <li key={index}>{area}</li>)}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+            
+            <Accordion type="multiple" defaultValue={['ats-friendliness']} className="w-full space-y-3">
+              <AnalysisSectionCard 
+                title="Clarity & Conciseness"
+                icon={Lightbulb}
+                score={analysisResult.analysisCategories.clarityAndConciseness.score}
+                feedback={analysisResult.analysisCategories.clarityAndConciseness.feedback}
+                suggestions={analysisResult.analysisCategories.clarityAndConciseness.suggestions}
+              />
+              <AnalysisSectionCard 
+                title="Impact & Achievements"
+                icon={TrendingUp}
+                score={analysisResult.analysisCategories.impactAndAchievements.score}
+                feedback={analysisResult.analysisCategories.impactAndAchievements.feedback}
+                suggestions={analysisResult.analysisCategories.impactAndAchievements.suggestions}
+              />
+              <AnalysisSectionCard 
+                title="Format & Structure"
+                icon={CheckSquare}
+                score={analysisResult.analysisCategories.formatAndStructure.score}
+                feedback={analysisResult.analysisCategories.formatAndStructure.feedback}
+                suggestions={analysisResult.analysisCategories.formatAndStructure.suggestions}
+              />
+              <AnalysisSectionCard 
+                title="ATS Friendliness"
+                icon={Bot} // Using Bot icon for ATS
+                score={analysisResult.analysisCategories.atsFriendliness.score}
+                feedback={analysisResult.analysisCategories.atsFriendliness.feedback}
+                suggestions={analysisResult.analysisCategories.atsFriendliness.suggestions}
+                defaultOpen={true}
+              />
+            </Accordion>
+
+            <Card className="mt-6">
+                <CardHeader>
+                    <CardTitle className="text-xl flex items-center">
+                        <ListChecks className="mr-2 h-6 w-6 text-primary"/> Detailed Feedback
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="whitespace-pre-line text-sm text-foreground/90 leading-relaxed">{analysisResult.detailedFeedback}</p>
+                </CardContent>
+            </Card>
           </CardContent>
         </Card>
       )}
@@ -399,8 +476,9 @@ export default function UploadResumePage() {
 }
 
 // Minimal Label component if not already globally available or for simplicity
-const Label = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-  <label className={`block text-sm font-medium text-foreground ${className}`}>
-    {children}
-  </label>
-);
+// const Label = ({ children, className }: { children: React.ReactNode, className?: string }) => (
+//   <label className={`block text-sm font-medium text-foreground ${className}`}>
+//     {children}
+//   </label>
+// );
+

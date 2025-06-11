@@ -1,8 +1,9 @@
+
 // src/contexts/AppContext.tsx
 'use client';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState } from 'react';
-import type { ResumeGraderOutput } from '@/ai/flows/resume-grader';
+import type { ResumeGraderOutput } from '@/ai/flows/resume-grader'; // Updated import
 import type { AiCareerSuggestionsOutput } from '@/ai/flows/ai-career-suggestions';
 import type { CareerRoadmapOutput } from '@/ai/flows/career-roadmap-generator';
 
@@ -13,13 +14,13 @@ interface AppContextType {
   resumeText: string | null;
   setResumeText: (text: string | null) => void;
   
-  resumeAnalysis: ResumeGraderOutput | null;
+  resumeAnalysis: ResumeGraderOutput | null; // Use the updated type
   setResumeAnalysis: (analysis: ResumeGraderOutput | null) => void;
   
-  quizAnswers: Record<string, string> | null; // e.g., { "q1": "optionA", "q2": "optionC" }
+  quizAnswers: Record<string, string> | null; 
   setQuizAnswers: (answers: Record<string, string> | null) => void;
   
-  formattedQuizResults: string | null; // Stringified version for AI
+  formattedQuizResults: string | null; 
   setFormattedQuizResults: (results: string | null) => void;
 
   careerSuggestionsData: AiCareerSuggestionsOutput | null;
@@ -34,7 +35,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [appName, setAppName] = useState('Career Compass');
   const [resumeText, setResumeText] = useState<string | null>(null);
-  const [resumeAnalysis, setResumeAnalysis] = useState<ResumeGraderOutput | null>(null);
+  const [resumeAnalysis, setResumeAnalysis] = useState<ResumeGraderOutput | null>(null); // Use updated type
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string> | null>(null);
   const [formattedQuizResults, setFormattedQuizResults] = useState<string | null>(null);
   const [careerSuggestionsData, setCareerSuggestionsData] = useState<AiCareerSuggestionsOutput | null>(null);
