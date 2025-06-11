@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Compass, LogOut } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { ThemeToggleButton } from './ThemeToggleButton';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -38,12 +39,13 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
           {user && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
               Welcome, {user.name}
             </span>
           )}
+          <ThemeToggleButton />
           <Button variant="outline" size="sm" onClick={logout}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout

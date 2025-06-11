@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Compass, LogIn, Briefcase, Brain, Route, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ThemeToggleButton } from '@/components/core/ThemeToggleButton';
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -45,11 +46,14 @@ export default function HomePage() {
             <Compass className="h-10 w-10 text-primary" />
             <span className="font-headline text-3xl font-bold text-primary">Career Compass</span>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/login">
-              <LogIn className="mr-2 h-5 w-5" /> Login / Sign Up
-            </Link>
-          </Button>
+          <div className="flex items-center space-x-2">
+            <ThemeToggleButton />
+            <Button asChild variant="outline">
+              <Link href="/login">
+                <LogIn className="mr-2 h-5 w-5" /> Login / Sign Up
+              </Link>
+            </Button>
+          </div>
         </header>
 
         <main className="container mx-auto flex flex-grow flex-col items-center justify-center px-4 py-12 text-center">
