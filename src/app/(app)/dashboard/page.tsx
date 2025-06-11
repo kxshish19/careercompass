@@ -1,10 +1,11 @@
+
 // src/app/(app)/dashboard/page.tsx
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Lightbulb, Zap, Route, Brain } from 'lucide-react';
+import { FileText, Lightbulb, Zap, Route, Brain, Info } from 'lucide-react'; // Added Info icon
 import Link from 'next/link';
 
 interface FeatureCardProps {
@@ -100,6 +101,13 @@ export default function DashboardPage() {
           icon={Brain}
           href="/results"
           cta="Get Suggestions"
+        />
+        <FeatureCard
+          title="How It Works (Demo)"
+          description="New to Career Compass? Take a guided tour to understand all the features and how to make the most of them."
+          icon={Info}
+          href="/demo-walkthrough"
+          cta="View Demo"
         />
       </div>
     </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
-import { Compass, LogOut, Trash2, Menu } from 'lucide-react'; // Added Menu icon
+import { Compass, LogOut, Trash2, Menu, Info } from 'lucide-react'; // Added Menu, Info icons
 import { usePathname } from 'next/navigation';
 import { ThemeToggleButton } from './ThemeToggleButton';
 import {
@@ -23,7 +23,7 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
-  SheetClose, // Added SheetClose
+  SheetClose,
 } from "@/components/ui/sheet";
 import { useState } from 'react';
 
@@ -34,10 +34,11 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/upload-resume', label: 'Resume' },
-    { href: '/quiz', label: 'Quiz' },
-    { href: '/results', label: 'Results' },
+    { href: '/dashboard', label: 'Dashboard', icon: Compass }, // Example, adjust as needed
+    { href: '/upload-resume', label: 'Resume', icon: Compass },
+    { href: '/quiz', label: 'Quiz', icon: Compass },
+    { href: '/results', label: 'Results', icon: Compass },
+    { href: '/demo-walkthrough', label: 'Demo', icon: Info },
   ];
 
   return (
@@ -117,11 +118,12 @@ export default function Header() {
                        <SheetClose asChild key={link.href}>
                         <Link
                           href={link.href}
-                          className={`flex items-center space-x-2 rounded-md px-3 py-2 text-base font-medium
+                          className={`flex items-center space-x-3 rounded-md px-3 py-2 text-base font-medium
                             ${pathname === link.href ? 'bg-secondary text-secondary-foreground' : 'hover:bg-muted'}`}
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
-                          {link.label}
+                          <link.icon className={`h-5 w-5 ${pathname === link.href ? 'text-secondary-foreground' : 'text-primary/70'}`} />
+                          <span>{link.label}</span>
                         </Link>
                       </SheetClose>
                     ))}
