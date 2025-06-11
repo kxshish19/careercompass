@@ -3,9 +3,9 @@
 'use client';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState } from 'react';
-import type { ResumeGraderOutput } from '@/ai/flows/resume-grader'; // Updated import
+import type { ResumeGraderOutput } from '@/ai/flows/resume-grader';
 import type { AiCareerSuggestionsOutput } from '@/ai/flows/ai-career-suggestions';
-import type { CareerRoadmapOutput } from '@/ai/flows/career-roadmap-generator';
+import type { CareerRoadmapOutput } from '@/ai/flows/career-roadmap-generator'; // Updated import
 
 interface AppContextType {
   appName: string;
@@ -14,7 +14,7 @@ interface AppContextType {
   resumeText: string | null;
   setResumeText: (text: string | null) => void;
   
-  resumeAnalysis: ResumeGraderOutput | null; // Use the updated type
+  resumeAnalysis: ResumeGraderOutput | null;
   setResumeAnalysis: (analysis: ResumeGraderOutput | null) => void;
   
   quizAnswers: Record<string, string> | null; 
@@ -26,7 +26,7 @@ interface AppContextType {
   careerSuggestionsData: AiCareerSuggestionsOutput | null;
   setCareerSuggestionsData: (data: AiCareerSuggestionsOutput | null) => void;
 
-  careerRoadmapsData: CareerRoadmapOutput | null;
+  careerRoadmapsData: CareerRoadmapOutput | null; // Uses the potentially updated type
   setCareerRoadmapsData: (data: CareerRoadmapOutput | null) => void;
 }
 
@@ -35,7 +35,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [appName, setAppName] = useState('Career Compass');
   const [resumeText, setResumeText] = useState<string | null>(null);
-  const [resumeAnalysis, setResumeAnalysis] = useState<ResumeGraderOutput | null>(null); // Use updated type
+  const [resumeAnalysis, setResumeAnalysis] = useState<ResumeGraderOutput | null>(null);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string> | null>(null);
   const [formattedQuizResults, setFormattedQuizResults] = useState<string | null>(null);
   const [careerSuggestionsData, setCareerSuggestionsData] = useState<AiCareerSuggestionsOutput | null>(null);

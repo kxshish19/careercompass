@@ -1,18 +1,54 @@
+
 // src/app/(app)/results/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { aiCareerSuggestions, type AiCareerSuggestionsOutput } from '@/ai/flows/ai-career-suggestions';
+import { aiCareerSuggestions } from '@/ai/flows/ai-career-suggestions';
 import { generateCareerRoadmap, type CareerRoadmapOutput } from '@/ai/flows/career-roadmap-generator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Alert as UiAlert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Renamed to avoid conflict
+import { Alert as UiAlert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Lightbulb, Zap, Route, ThumbsUp, Sparkles, MapPinned } from 'lucide-react';
+import { 
+    Loader2, AlertCircle, Lightbulb, Zap, Route, ThumbsUp, Sparkles, MapPinned, 
+    ListChecks, Target, BookOpen, Users, Clock, ArrowRightCircle 
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
+interface RoadmapSectionProps {
+  title: string;
+  icon: React.ElementType;
+  items?: string[];
+  text?: string;
+  className?: string;
+}
+
+const RoadmapSection: React.FC<RoadmapSectionProps> = ({ title, icon: Icon, items, text, className }) => {
+  if (!items && !text) return null;
+  if (items && items.length === 0 && !text) return null;
+
+  return (
+    <div className={cn("py-3", className)}>
+      <h4 className="text-md font-semibold flex items-center mb-2 text-primary/90">
+        <Icon className="h-5 w-5 mr-2 text-primary" />
+        {title}
+      </h4>
+      {text && <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{text}</p>}
+      {items && items.length > 0 && (
+        <ul className="list-disc list-inside space-y-1 text-sm text-foreground/80 pl-5">
+          {items.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 
 export default function ResultsPage() {
   const { 
@@ -29,7 +65,6 @@ export default function ResultsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch suggestions if data is available and not already fetched from context
     if (resumeText && formattedQuizResults && !careerSuggestionsData && !isLoadingSuggestions) {
       const fetchSuggestions = async () => {
         setIsLoadingSuggestions(true);
@@ -40,7 +75,7 @@ export default function ResultsPage() {
             personalityQuizResults: formattedQuizResults,
           });
           setCareerSuggestionsData(suggestions);
-          toast({ title: "Career Suggestions Loaded!", description: "AI has generated some career ideas for you.", icon: <Sparkles className="text-yellow-500" /> });
+          toast({ title: "Career Suggestions Loaded!", description: "AI has generated some career ideas for you." });
         } catch (e) {
           console.error('Error fetching career suggestions:', e);
           setError('Failed to load career suggestions. Please try again later.');
@@ -54,13 +89,9 @@ export default function ResultsPage() {
   }, [resumeText, formattedQuizResults, careerSuggestionsData, setCareerSuggestionsData, isLoadingSuggestions, toast]);
 
   useEffect(() => {
-    // Fetch roadmaps if suggestions are available (either newly fetched or from context)
-    // and roadmaps not already fetched from context
     if (careerSuggestionsData && resumeText && formattedQuizResults && !careerRoadmapsData && !isLoadingRoadmaps) {
       const fetchRoadmaps = async () => {
         setIsLoadingRoadmaps(true);
-        // Do not reset general error if suggestions part failed but this part is now trying
-        // setError(null); 
         try {
           const roadmaps = await generateCareerRoadmap({
             careerSuggestions: careerSuggestionsData.careerSuggestions.join(', '),
@@ -68,7 +99,7 @@ export default function ResultsPage() {
             personalityQuizResults: formattedQuizResults,
           });
           setCareerRoadmapsData(roadmaps);
-           toast({ title: "Career Roadmaps Generated!", description: "Detailed roadmaps are now available.", icon: <MapPinned className="text-blue-500" />});
+           toast({ title: "Career Roadmaps Generated!", description: "Detailed roadmaps are now available."});
         } catch (e) {
           console.error('Error fetching career roadmaps:', e);
           setError((prevError) => (prevError ? prevError + ' ' : '') + 'Failed to load career roadmaps. Please try again later.');
@@ -149,7 +180,6 @@ export default function ResultsPage() {
         </UiAlert>
       )}
 
-      {/* Career Suggestions Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
@@ -191,7 +221,6 @@ export default function ResultsPage() {
         </CardContent>
       </Card>
 
-      {/* Career Roadmaps Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex items-center space-x-3">
@@ -201,7 +230,7 @@ export default function ResultsPage() {
         </CardHeader>
         <CardContent>
           {isLoadingRoadmaps && !careerRoadmapsData && renderLoadingState("Generating career roadmaps...")}
-          {!isLoadingRoadmaps && careerRoadmapsData && (
+          {!isLoadingRoadmaps && careerRoadmapsData && careerRoadmapsData.roadmaps && (
             <Accordion type="single" collapsible className="w-full space-y-3">
               {careerRoadmapsData.roadmaps.map((roadmapItem, index) => (
                 <AccordionItem value={`item-${index}`} key={index} className="border border-input rounded-lg bg-card hover:border-primary/50 transition-colors">
@@ -211,17 +240,57 @@ export default function ResultsPage() {
                         Roadmap for: {roadmapItem.career}
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="p-4 pt-0">
-                    <div className="whitespace-pre-line text-sm text-foreground/90 leading-relaxed">{roadmapItem.roadmap}</div>
+                  <AccordionContent className="p-4 pt-0 space-y-4 divide-y divide-border">
+                    <RoadmapSection 
+                      title="Introduction"
+                      icon={Lightbulb}
+                      text={roadmapItem.details.introduction}
+                      className="pt-2"
+                    />
+                    <RoadmapSection 
+                      title="Skills to Develop"
+                      icon={ListChecks}
+                      items={roadmapItem.details.skillsToDevelop}
+                    />
+                    <RoadmapSection 
+                      title="Key Milestones"
+                      icon={Target}
+                      items={roadmapItem.details.keyMilestones}
+                    />
+                    <RoadmapSection 
+                      title="Learning Resources"
+                      icon={BookOpen}
+                      items={roadmapItem.details.learningResources}
+                    />
+                    {roadmapItem.details.networkingTips && roadmapItem.details.networkingTips.length > 0 && (
+                      <RoadmapSection 
+                        title="Networking Tips"
+                        icon={Users}
+                        items={roadmapItem.details.networkingTips}
+                      />
+                    )}
+                    {roadmapItem.details.timelineEstimate && (
+                       <RoadmapSection 
+                        title="Estimated Timeline"
+                        icon={Clock}
+                        text={roadmapItem.details.timelineEstimate}
+                      />
+                    )}
+                     <RoadmapSection 
+                        title="Your Next Step"
+                        icon={ArrowRightCircle}
+                        text={roadmapItem.details.nextStep}
+                        className="pb-0"
+                      />
                   </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
           )}
-          {!isLoadingRoadmaps && !careerRoadmapsData && !error && careerSuggestionsData && (
+          {!isLoadingRoadmaps && (!careerRoadmapsData || !careerRoadmapsData.roadmaps) && !error && careerSuggestionsData && (
              <p className="text-muted-foreground">Roadmaps will appear here once generated. If suggestions are loaded, roadmaps might still be processing or encountered an issue.</p>
           )}
-           {!isLoadingRoadmaps && !careerRoadmapsData && !error && !careerSuggestionsData && (
+           {!isLoadingRoadmaps && (!careerRoadmapsData || !careerRoadmapsData.roadmaps) && !error && !careerSuggestionsData && (
              <p className="text-muted-foreground">Roadmaps will appear here once career suggestions are generated first.</p>
           )}
         </CardContent>
@@ -229,3 +298,4 @@ export default function ResultsPage() {
     </div>
   );
 }
+
