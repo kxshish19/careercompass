@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import Image from 'next/image'; // Import next/image
 import { Compass, FileText, Lightbulb, Zap, Route, MessageCircle, LogIn, ArrowLeft } from 'lucide-react';
 import { ThemeToggleButton } from '@/components/core/ThemeToggleButton';
 
@@ -67,6 +68,17 @@ export default function DemoWalkthroughPage() {
               A step-by-step guide to navigating your career path with AI.
             </CardDescription>
           </CardHeader>
+          <CardContent className="flex justify-center">
+            <div className="relative w-full max-w-lg h-64 md:h-80 rounded-lg overflow-hidden shadow-md">
+              <Image
+                src="https://placehold.co/600x400.png"
+                alt="Career Compass Demo Illustration"
+                layout="fill"
+                objectFit="cover"
+                data-ai-hint="navigation map"
+              />
+            </div>
+          </CardContent>
         </Card>
 
         <div className="space-y-6">
