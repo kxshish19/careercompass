@@ -40,7 +40,7 @@ export default function Header() {
           <span className="font-headline text-2xl font-bold text-primary">Career Compass</span>
         </Link>
         
-        <nav className="hidden md:flex items-center space-x-2">
+        <nav className="hidden md:flex items-center space-x-3"> {/* Changed space-x-2 to space-x-3 */}
           {navLinks.map((link) => (
             <Button
               key={link.href}
@@ -53,7 +53,7 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3"> {/* Changed space-x-2 to space-x-3 */}
           {user && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
               Welcome, {user.name}
