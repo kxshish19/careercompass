@@ -11,12 +11,9 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
+      // Removed placehold.co entry if it was the only one.
+      // If other patterns existed, they would remain.
+      // Assuming it was the only entry based on the previous request.
     ],
   },
 };
