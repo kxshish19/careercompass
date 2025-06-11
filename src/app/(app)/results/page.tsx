@@ -13,8 +13,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-    Loader2, AlertCircle, Lightbulb, Zap, Route, ThumbsUp, Sparkles, MapPinned, 
+import {
+    Loader2, AlertCircle, Lightbulb, Zap, Route, ThumbsUp, Sparkles, MapPinned,
     ListChecks, Target, BookOpen, Users, Clock, ArrowRightCircle, MessageCircle, SendHorizonal, User, Bot
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -60,13 +60,13 @@ interface ChatMessage {
 
 
 export default function ResultsPage() {
-  const { 
-    resumeText, 
+  const {
+    resumeText,
     formattedQuizResults,
     careerSuggestionsData, setCareerSuggestionsData,
     careerRoadmapsData, setCareerRoadmapsData
   } = useAppContext();
-  
+
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export default function ResultsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (resumeText && formattedQuizResults && !careerSuggestionsData && !isLoadingSuggestions) {
+    if (resumeText && formattedQuizResults && !careerSuggestionsData && !isLoadingSuggestions && !error) {
       const fetchSuggestions = async () => {
         setIsLoadingSuggestions(true);
         setError(null);
@@ -100,10 +100,10 @@ export default function ResultsPage() {
       };
       fetchSuggestions();
     }
-  }, [resumeText, formattedQuizResults, careerSuggestionsData, setCareerSuggestionsData, isLoadingSuggestions, toast]);
+  }, [resumeText, formattedQuizResults, careerSuggestionsData, setCareerSuggestionsData, isLoadingSuggestions, toast, error]);
 
   useEffect(() => {
-    if (careerSuggestionsData && resumeText && formattedQuizResults && !careerRoadmapsData && !isLoadingRoadmaps) {
+    if (careerSuggestionsData && resumeText && formattedQuizResults && !careerRoadmapsData && !isLoadingRoadmaps && !error) {
       const fetchRoadmaps = async () => {
         setIsLoadingRoadmaps(true);
         try {
@@ -111,7 +111,7 @@ export default function ResultsPage() {
             careerSuggestions: careerSuggestionsData.careerSuggestions.join(', '),
             resumeContent: resumeText,
             personalityQuizResults: formattedQuizResults,
-          } as CareerRoadmapInput); // Cast to satisfy type, actual schema matches
+          } as CareerRoadmapInput);
           setCareerRoadmapsData(roadmaps);
            toast({ title: "Career Roadmaps Generated!", description: "Detailed roadmaps are now available."});
         } catch (e) {
@@ -124,13 +124,34 @@ export default function ResultsPage() {
       };
       fetchRoadmaps();
     }
-  }, [careerSuggestionsData, resumeText, formattedQuizResults, careerRoadmapsData, setCareerRoadmapsData, isLoadingRoadmaps, toast]);
+  }, [careerSuggestionsData, resumeText, formattedQuizResults, careerRoadmapsData, setCareerRoadmapsData, isLoadingRoadmaps, toast, error]);
 
   useEffect(() => {
     if (chatScrollAreaRef.current) {
       chatScrollAreaRef.current.scrollTo({ top: chatScrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [chatMessages]);
+
+  // Add initial AI welcome message after results are loaded and chat is empty
+  useEffect(() => {
+    if (
+      chatMessages.length === 0 &&
+      (careerSuggestionsData || careerRoadmapsData) &&
+      !isLoadingSuggestions &&
+      !isLoadingRoadmaps &&
+      !isChatLoading
+    ) {
+      const initialAiMessage: ChatMessage = {
+        id: `ai-initial-${Date.now()}`,
+        role: 'model',
+        content: "Hello! I'm your AI Career Counselor. Now that your results are loaded, how can I help you further with your career planning?",
+      };
+      setChatMessages([initialAiMessage]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [careerSuggestionsData, careerRoadmapsData, isLoadingSuggestions, isLoadingRoadmaps, isChatLoading]);
+  // Note: chatMessages is intentionally omitted from dependencies here to ensure this effect runs
+  // primarily when the supporting data loads and the chat is empty, avoiding loops.
 
   const handleSendChatMessage = async () => {
     if (!chatInputValue.trim()) return;
@@ -148,7 +169,7 @@ export default function ResultsPage() {
       const roadmapsSummary = careerRoadmapsData?.roadmaps.map(r => `${r.career}: ${r.details.introduction.substring(0,100)}...`).join('\n') || undefined;
 
       const chatInput: CareerHelpChatInput = {
-        chatHistory: chatMessages.map(m => ({role: m.role, content: m.content})), // Transform to match schema
+        chatHistory: chatMessages.map(m => ({role: m.role, content: m.content})),
         currentMessage: newUserMessage.content,
         resumeText: resumeText || undefined,
         quizResults: formattedQuizResults || undefined,
@@ -157,7 +178,7 @@ export default function ResultsPage() {
       };
 
       const response: CareerHelpChatOutput = await careerHelpChat(chatInput);
-      
+
       const aiMessage: ChatMessage = {
         id: `ai-${Date.now()}`,
         role: 'model',
@@ -216,7 +237,7 @@ export default function ResultsPage() {
   if (!resumeText || !formattedQuizResults) {
     return <MissingPrerequisites />;
   }
-  
+
   const renderLoadingState = (message: string) => (
     <Card className="shadow-md my-4">
       <CardContent className="pt-6 flex flex-col items-center justify-center space-y-3">
@@ -309,42 +330,42 @@ export default function ResultsPage() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="p-4 pt-0 space-y-4 divide-y divide-border">
-                    <RoadmapSection 
+                    <RoadmapSection
                       title="Introduction"
                       icon={Lightbulb}
                       text={roadmapItem.details.introduction}
                       className="pt-2"
                     />
-                    <RoadmapSection 
+                    <RoadmapSection
                       title="Skills to Develop"
                       icon={ListChecks}
                       items={roadmapItem.details.skillsToDevelop}
                     />
-                    <RoadmapSection 
+                    <RoadmapSection
                       title="Key Milestones"
                       icon={Target}
                       items={roadmapItem.details.keyMilestones}
                     />
-                    <RoadmapSection 
+                    <RoadmapSection
                       title="Learning Resources"
                       icon={BookOpen}
                       items={roadmapItem.details.learningResources}
                     />
                     {roadmapItem.details.networkingTips && roadmapItem.details.networkingTips.length > 0 && (
-                      <RoadmapSection 
+                      <RoadmapSection
                         title="Networking Tips"
                         icon={Users}
                         items={roadmapItem.details.networkingTips}
                       />
                     )}
                     {roadmapItem.details.timelineEstimate && (
-                       <RoadmapSection 
+                       <RoadmapSection
                         title="Estimated Timeline"
                         icon={Clock}
                         text={roadmapItem.details.timelineEstimate}
                       />
                     )}
-                     <RoadmapSection 
+                     <RoadmapSection
                         title="Your Next Step"
                         icon={ArrowRightCircle}
                         text={roadmapItem.details.nextStep}
@@ -376,8 +397,8 @@ export default function ResultsPage() {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-72 w-full rounded-md border p-4 mb-4" ref={chatScrollAreaRef}>
-              {chatMessages.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No messages yet. Ask a question to get started!</p>
+              {chatMessages.length === 0 && !isChatLoading && (
+                <p className="text-sm text-muted-foreground text-center py-4">Ask a question to get started!</p>
               )}
               {chatMessages.map((message) => (
                 <div
@@ -422,3 +443,4 @@ export default function ResultsPage() {
     </div>
   );
 }
+
