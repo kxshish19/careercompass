@@ -16,6 +16,7 @@ Career Compass is a Next.js web application designed to help users gain insights
   - [User Experience](#user-experience)
   - [Implemented Features](#implemented-features)
   - [Key Navigation Flows](#key-navigation-flows)
+  - [Demo & Walkthrough](#demo--walkthrough)
 - [Unique Selling Propositions](#unique-selling-propositions)
 - [AI Integration & Data Flow](#ai-integration--data-flow)
   - [AI Model Integration](#ai-model-integration)
@@ -42,11 +43,12 @@ Navigating the modern job market can be complex. Career Compass aims to simplify
 ## Core Features
 
 -   **User Authentication**: Simple local (mock) authentication to manage user access and cache data per user.
+-   **Responsive Navigation**: Includes a mobile-friendly drawer menu for easy navigation on smaller devices.
 -   **Resume Upload & Analysis**:
     -   Users can upload their resume (PDF, DOCX, common image formats).
     -   OCR is used to extract text from the resume.
     -   AI-powered **Resume Grader** provides an overall score, detailed feedback on clarity, impact, format, ATS friendliness, positive points, and areas for improvement.
--   **Personality Quiz**: A concise MBTI-style quiz to refine career suggestions.
+-   **Personality Quiz**: A concise MBTI-style quiz to refine career suggestions. Users are prompted to take the quiz after resume analysis for a streamlined experience.
 -   **AI Career Suggestions**:
     -   Combines resume analysis and personality quiz results.
     -   Offers 3-5 tailored career suggestions with AI reasoning.
@@ -54,16 +56,18 @@ Navigating the modern job market can be complex. Career Compass aims to simplify
     -   Generates detailed, structured roadmaps for suggested careers.
     -   Includes introduction, skills to develop, key milestones, learning resources, networking tips, timeline estimates, and next actionable steps.
 -   **AI Career Help Chatbot**:
-    -   Allows users to ask follow-up questions related to their results.
+    -   Allows users to ask follow-up questions related to their results or general career topics.
     -   Context-aware, utilizing the user's resume, quiz, suggestions, and roadmaps.
--   **Client-Side Data Caching**: User-specific data (resume, quiz, AI results) is cached in `localStorage` and can be reset by the user.
+    -   Includes a default welcome message.
+-   **Client-Side Data Caching**: User-specific data (resume, quiz, AI results) is cached in `localStorage` and can be reset by the user via a button in the header.
 -   **Theme Toggle**: Supports light and dark modes, with user preference saved.
+-   **Demo/Walkthrough Page**: A dedicated page (`/demo-walkthrough`) explaining the step-by-step usage of the application.
 
 ## Tech Stack
 
 -   **Frontend Framework**: Next.js (with App Router)
 -   **UI Library**: React
--   **Component Library**: ShadCN UI
+-   **Component Library**: ShadCN UI (including `Sheet` for mobile navigation)
 -   **Styling**: Tailwind CSS
 -   **AI Integration**: Genkit
 -   **Language Models**: Google Gemini (via Genkit Google AI Plugin)
@@ -114,7 +118,7 @@ The application fully supports both light and dark themes. The theme preference 
 ## Key Functionality & User Flows
 
 ### User Experience
-The application is designed for a single user role. All authenticated users have access to the same set of features. The interface is built to be responsive for desktop, tablet, and mobile devices.
+The application is designed for a single user role. All authenticated users have access to the same set of features. The interface is built to be responsive for desktop, tablet, and mobile devices, including a dedicated mobile navigation menu.
 
 ### Implemented Features
 (Refer to [Core Features](#core-features) section above)
@@ -122,10 +126,10 @@ The application is designed for a single user role. All authenticated users have
 ### Key Navigation Flows
 1.  **Initial Setup & Dashboard Access**:
     User visits landing page (`/`) → Clicks "Login" → Enters any email on Login Page (`/login`) → Redirected to Dashboard (`/dashboard`).
-2.  **Resume Analysis**:
-    From Dashboard or Header → Navigates to "Resume" (`/upload-resume`) → Uploads resume file → Views extracted text preview → Clicks "Analyze Resume" → Views detailed AI-generated resume report.
+2.  **Resume Analysis & Quiz Prompt**:
+    From Dashboard or Header → Navigates to "Resume" (`/upload-resume`) → Uploads resume file → Views extracted text preview → Clicks "Analyze Resume" → Views detailed AI-generated resume report → **Prompted to take Personality Quiz**.
 3.  **Personality Quiz**:
-    From Dashboard or Header → Navigates to "Quiz" (`/quiz`) → Answers questions → Submits quiz → Views completion message.
+    From Resume page, Dashboard or Header → Navigates to "Quiz" (`/quiz`) → Answers questions → Submits quiz → Views completion message.
 4.  **Viewing AI Results (Suggestions & Roadmaps)**:
     From Dashboard or Header → Navigates to "Results" (`/results`) →
     - If resume and quiz are complete, AI suggestions are fetched, followed by roadmaps.
@@ -138,13 +142,16 @@ The application is designed for a single user role. All authenticated users have
 7.  **Logout**:
     User clicks "Logout" in Header → Session cleared → Redirected to landing page (`/`).
 
+### Demo & Walkthrough
+A dedicated page at `/demo-walkthrough` (accessible from the landing page) provides a step-by-step guide on using Career Compass features.
+
 ## Unique Selling Propositions
 
 -   **Personalized AI Guidance**: Leverages AI to provide career advice tailored to individual resume content and personality quiz outcomes.
 -   **Structured & Actionable Insights**: Delivers resume feedback and career roadmaps in a clear, categorized, and actionable format.
 -   **Interactive Learning**: The AI chatbot allows users to dive deeper into their results and ask specific career-related questions.
 -   **User-Centric Caching**: Persists user data (resume, quiz, AI results) locally in the browser for a seamless experience across sessions, with an option for users to reset their data.
--   **Modern & Responsive UI**: Built with ShadCN UI and Tailwind CSS for a clean, accessible, and mobile-first user experience.
+-   **Modern & Responsive UI**: Built with ShadCN UI and Tailwind CSS for a clean, accessible, and mobile-first user experience, including dedicated mobile navigation.
 
 ## AI Integration & Data Flow
 
@@ -177,7 +184,7 @@ The application is designed for a single user role. All authenticated users have
 
 ## UI Components
 The application heavily utilizes components from **ShadCN UI**, providing a consistent and modern look and feel. Key components include:
--   Layout & Navigation: `Card`, `Header` (custom), `Button`, `Link`.
+-   Layout & Navigation: `Card`, `Header` (custom, with mobile `Sheet` navigation), `Button`, `Link`.
 -   Content Display: `Card`, `Alert`, `Accordion`, `Progress`, `Badge`.
 -   Forms & Input: `Input`, `RadioGroup`, `Label`, `Button`.
 -   Interaction & Feedback: `AlertDialog`, `Toast`, `ScrollArea`, `Spinner` (custom).
@@ -198,7 +205,8 @@ This key is required for the Genkit AI flows to function.
 ### Installation
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/kxshish19/careercompass.git
+    git clone <your_repository_url> careercompass 
+    # Example: git clone https://github.com/yourusername/careercompass.git careercompass
     cd careercompass
     ```
 2.  Install dependencies:
@@ -227,7 +235,7 @@ You need to run two development servers concurrently: one for the Next.js fronte
     ```
     This usually starts the application on `http://localhost:9002`.
 
-Open `http://localhost:9002` in your browser to view the app.
+Open `http://localhost:9002` in your browser to view the app. Check out the `/demo-walkthrough` page for a guide on using the app.
 
 ### Building for Production
 ```bash
@@ -243,6 +251,7 @@ A brief overview of the key directories:
 -   `src/app/`: Contains the Next.js pages and layouts using the App Router.
     -   `src/app/(app)/`: Authenticated routes (dashboard, quiz, results, etc.).
     -   `src/app/login/`: Login page.
+    -   `src/app/demo-walkthrough/`: Public demo/guide page.
     -   `src/app/page.tsx`: Landing page.
 -   `src/ai/`: Houses all Genkit related code.
     -   `src/ai/flows/`: Definitions for individual AI flows (e.g., `resumeGrader.ts`, `aiCareerSuggestions.ts`).

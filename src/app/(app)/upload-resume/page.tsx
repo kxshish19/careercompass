@@ -13,13 +13,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { 
     FileText, Send, Loader2, CheckCircle, AlertCircle, FileUp, XCircle, 
-    Sparkles, Lightbulb, TrendingUp, CheckSquare, BarChart3, Bot, ListChecks, ThumbsUp, ThumbsDown
+    Sparkles, Lightbulb, TrendingUp, CheckSquare, BarChart3, Bot, ListChecks, ThumbsUp, ThumbsDown, ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import Tesseract from 'tesseract.js';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link'; // Added Link
 
 if (typeof window !== 'undefined') {
   const detectedPdfJsVersion = pdfjsLib.version;
@@ -111,7 +112,8 @@ export default function UploadResumePage() {
     setResumeText: setContextResumeText, 
     setResumeAnalysis: setContextResumeAnalysis,
     resumeText: initialResumeText,
-    resumeAnalysis: initialResumeAnalysis 
+    resumeAnalysis: initialResumeAnalysis,
+    formattedQuizResults // To check if quiz has been taken
   } = useAppContext();
   
   const [selectedFiles, setSelectedFiles] = useState<File[] | null>(null);
@@ -129,7 +131,6 @@ export default function UploadResumePage() {
   }, [initialResumeText, initialResumeAnalysis, extractedText, analysisResult]);
 
   async function processSingleFile(file: File): Promise<string> {
-    // ... (keep existing processSingleFile logic, no change here)
     let text = '';
     if (file.type === 'application/pdf') {
       const arrayBuffer = await file.arrayBuffer();
@@ -186,7 +187,6 @@ export default function UploadResumePage() {
   }
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    // ... (keep existing handleFileChange logic, no change here)
     const files = event.target.files;
     if (files && files.length > 0) {
       const fileList = Array.from(files);
@@ -364,121 +364,136 @@ export default function UploadResumePage() {
       )}
 
       {analysisResult && !isLoadingAnalysis && (
-        <Card className="shadow-xl">
-          <CardHeader className="border-b">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <CardTitle className="text-3xl font-headline text-primary mb-1">Resume Analysis Report</CardTitle>
-                    <CardDescription className="text-base">Detailed insights into your resume's effectiveness.</CardDescription>
-                </div>
-                <div className="text-right">
-                    <p className="text-lg font-semibold">Overall Score:</p>
-                    <p className={`text-5xl font-bold ${getScoreColor(analysisResult.overallScore)}`}>{analysisResult.overallScore}<span className="text-2xl">/100</span></p>
-                </div>
-            </div>
-             <div className="mt-2">
-                <ColoredProgress value={analysisResult.overallScore} variant={getProgressVariant(analysisResult.overallScore)} />
-             </div>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <Alert className={cn("border-l-4", 
-                analysisResult.overallScore >= 80 ? "border-green-500 bg-green-50 dark:bg-green-900/30" : 
-                analysisResult.overallScore >= 60 ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30" : 
-                "border-red-500 bg-red-50 dark:bg-red-900/30"
-            )}>
-              <Sparkles className={cn("h-5 w-5", 
-                analysisResult.overallScore >= 80 ? "text-green-600" : 
-                analysisResult.overallScore >= 60 ? "text-yellow-600" : 
-                "text-red-600"
-              )} />
-              <AlertTitle className="font-semibold text-lg">Summary</AlertTitle>
-              <AlertDescription className="whitespace-pre-line text-sm leading-relaxed">{analysisResult.summary}</AlertDescription>
-            </Alert>
+        <>
+          <Card className="shadow-xl">
+            <CardHeader className="border-b">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                      <CardTitle className="text-3xl font-headline text-primary mb-1">Resume Analysis Report</CardTitle>
+                      <CardDescription className="text-base">Detailed insights into your resume's effectiveness.</CardDescription>
+                  </div>
+                  <div className="text-right">
+                      <p className="text-lg font-semibold">Overall Score:</p>
+                      <p className={`text-5xl font-bold ${getScoreColor(analysisResult.overallScore)}`}>{analysisResult.overallScore}<span className="text-2xl">/100</span></p>
+                  </div>
+              </div>
+               <div className="mt-2">
+                  <ColoredProgress value={analysisResult.overallScore} variant={getProgressVariant(analysisResult.overallScore)} />
+               </div>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              <Alert className={cn("border-l-4", 
+                  analysisResult.overallScore >= 80 ? "border-green-500 bg-green-50 dark:bg-green-900/30" : 
+                  analysisResult.overallScore >= 60 ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30" : 
+                  "border-red-500 bg-red-50 dark:bg-red-900/30"
+              )}>
+                <Sparkles className={cn("h-5 w-5", 
+                  analysisResult.overallScore >= 80 ? "text-green-600" : 
+                  analysisResult.overallScore >= 60 ? "text-yellow-600" : 
+                  "text-red-600"
+                )} />
+                <AlertTitle className="font-semibold text-lg">Summary</AlertTitle>
+                <AlertDescription className="whitespace-pre-line text-sm leading-relaxed">{analysisResult.summary}</AlertDescription>
+              </Alert>
 
-            <div className="grid md:grid-cols-2 gap-6">
-                {analysisResult.positivePoints && analysisResult.positivePoints.length > 0 && (
-                    <Card className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-xl flex items-center text-green-700 dark:text-green-300">
-                                <ThumbsUp className="mr-2 h-5 w-5"/> Positive Points
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-green-800 dark:text-green-200">
-                                {analysisResult.positivePoints.map((point, index) => <li key={index}>{point}</li>)}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                )}
-                {analysisResult.areasForImprovement && analysisResult.areasForImprovement.length > 0 && (
-                     <Card className="bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-xl flex items-center text-yellow-700 dark:text-yellow-300">
-                                <ThumbsDown className="mr-2 h-5 w-5"/> Areas for Improvement
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-yellow-800 dark:text-yellow-200">
-                                {analysisResult.areasForImprovement.map((area, index) => <li key={index}>{area}</li>)}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
-            
-            <Accordion type="multiple" defaultValue={['ats-friendliness']} className="w-full space-y-3">
-              <AnalysisSectionCard 
-                title="Clarity & Conciseness"
-                icon={Lightbulb}
-                score={analysisResult.analysisCategories.clarityAndConciseness.score}
-                feedback={analysisResult.analysisCategories.clarityAndConciseness.feedback}
-                suggestions={analysisResult.analysisCategories.clarityAndConciseness.suggestions}
-              />
-              <AnalysisSectionCard 
-                title="Impact & Achievements"
-                icon={TrendingUp}
-                score={analysisResult.analysisCategories.impactAndAchievements.score}
-                feedback={analysisResult.analysisCategories.impactAndAchievements.feedback}
-                suggestions={analysisResult.analysisCategories.impactAndAchievements.suggestions}
-              />
-              <AnalysisSectionCard 
-                title="Format & Structure"
-                icon={CheckSquare}
-                score={analysisResult.analysisCategories.formatAndStructure.score}
-                feedback={analysisResult.analysisCategories.formatAndStructure.feedback}
-                suggestions={analysisResult.analysisCategories.formatAndStructure.suggestions}
-              />
-              <AnalysisSectionCard 
-                title="ATS Friendliness"
-                icon={Bot} // Using Bot icon for ATS
-                score={analysisResult.analysisCategories.atsFriendliness.score}
-                feedback={analysisResult.analysisCategories.atsFriendliness.feedback}
-                suggestions={analysisResult.analysisCategories.atsFriendliness.suggestions}
-                defaultOpen={true}
-              />
-            </Accordion>
+              <div className="grid md:grid-cols-2 gap-6">
+                  {analysisResult.positivePoints && analysisResult.positivePoints.length > 0 && (
+                      <Card className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700">
+                          <CardHeader className="pb-3">
+                              <CardTitle className="text-xl flex items-center text-green-700 dark:text-green-300">
+                                  <ThumbsUp className="mr-2 h-5 w-5"/> Positive Points
+                              </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                              <ul className="list-disc list-inside space-y-1 text-sm text-green-800 dark:text-green-200">
+                                  {analysisResult.positivePoints.map((point, index) => <li key={index}>{point}</li>)}
+                              </ul>
+                          </CardContent>
+                      </Card>
+                  )}
+                  {analysisResult.areasForImprovement && analysisResult.areasForImprovement.length > 0 && (
+                       <Card className="bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700">
+                          <CardHeader className="pb-3">
+                              <CardTitle className="text-xl flex items-center text-yellow-700 dark:text-yellow-300">
+                                  <ThumbsDown className="mr-2 h-5 w-5"/> Areas for Improvement
+                              </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                              <ul className="list-disc list-inside space-y-1 text-sm text-yellow-800 dark:text-yellow-200">
+                                  {analysisResult.areasForImprovement.map((area, index) => <li key={index}>{area}</li>)}
+                              </ul>
+                          </CardContent>
+                      </Card>
+                  )}
+              </div>
+              
+              <Accordion type="multiple" defaultValue={['ats-friendliness']} className="w-full space-y-3">
+                <AnalysisSectionCard 
+                  title="Clarity & Conciseness"
+                  icon={Lightbulb}
+                  score={analysisResult.analysisCategories.clarityAndConciseness.score}
+                  feedback={analysisResult.analysisCategories.clarityAndConciseness.feedback}
+                  suggestions={analysisResult.analysisCategories.clarityAndConciseness.suggestions}
+                />
+                <AnalysisSectionCard 
+                  title="Impact & Achievements"
+                  icon={TrendingUp}
+                  score={analysisResult.analysisCategories.impactAndAchievements.score}
+                  feedback={analysisResult.analysisCategories.impactAndAchievements.feedback}
+                  suggestions={analysisResult.analysisCategories.impactAndAchievements.suggestions}
+                />
+                <AnalysisSectionCard 
+                  title="Format & Structure"
+                  icon={CheckSquare}
+                  score={analysisResult.analysisCategories.formatAndStructure.score}
+                  feedback={analysisResult.analysisCategories.formatAndStructure.feedback}
+                  suggestions={analysisResult.analysisCategories.formatAndStructure.suggestions}
+                />
+                <AnalysisSectionCard 
+                  title="ATS Friendliness"
+                  icon={Bot}
+                  score={analysisResult.analysisCategories.atsFriendliness.score}
+                  feedback={analysisResult.analysisCategories.atsFriendliness.feedback}
+                  suggestions={analysisResult.analysisCategories.atsFriendliness.suggestions}
+                  defaultOpen={true}
+                />
+              </Accordion>
 
-            <Card className="mt-6">
-                <CardHeader>
-                    <CardTitle className="text-xl flex items-center">
-                        <ListChecks className="mr-2 h-6 w-6 text-primary"/> Detailed Feedback
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="whitespace-pre-line text-sm text-foreground/90 leading-relaxed">{analysisResult.detailedFeedback}</p>
-                </CardContent>
+              <Card className="mt-6">
+                  <CardHeader>
+                      <CardTitle className="text-xl flex items-center">
+                          <ListChecks className="mr-2 h-6 w-6 text-primary"/> Detailed Feedback
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p className="whitespace-pre-line text-sm text-foreground/90 leading-relaxed">{analysisResult.detailedFeedback}</p>
+                  </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+          
+          {!formattedQuizResults && (
+            <Card className="shadow-lg mt-8 border-primary border-2">
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <Lightbulb className="h-7 w-7 text-primary animate-pulse" />
+                  <CardTitle className="text-2xl font-headline">Next Step: Personality Quiz</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Now that your resume is analyzed, take our personality quiz to get even more tailored career suggestions and roadmaps!
+                </p>
+                <Button asChild size="lg">
+                  <Link href="/quiz">
+                    Take the Quiz Now <ChevronRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              </CardContent>
             </Card>
-          </CardContent>
-        </Card>
+          )}
+        </>
       )}
     </div>
   );
 }
-
-// Minimal Label component if not already globally available or for simplicity
-// const Label = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-//   <label className={`block text-sm font-medium text-foreground ${className}`}>
-//     {children}
-//   </label>
-// );
-

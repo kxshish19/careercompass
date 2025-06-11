@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Spinner } from '@/components/core/Spinner';
 import { Button } from '@/components/ui/button';
-import { Compass, LogIn, Briefcase, Brain, Route, Zap } from 'lucide-react';
+import { Compass, LogIn, Briefcase, Brain, Route, Zap, Info } from 'lucide-react'; // Added Info icon
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggleButton } from '@/components/core/ThemeToggleButton';
@@ -122,16 +122,21 @@ export default function HomePage() {
             </Card>
           </div>
 
-          <div className="mt-16">
+          <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button asChild size="lg" className="px-10 py-4 text-xl font-semibold">
               <Link href="/login">
                 <LogIn className="mr-3 h-6 w-6" /> Get Started on Your Journey
               </Link>
             </Button>
-            <p className="mt-4 text-sm text-muted-foreground">
+            <Button asChild size="lg" variant="outline" className="px-10 py-4 text-xl font-semibold">
+              <Link href="/demo-walkthrough">
+                <Info className="mr-3 h-6 w-6" /> How It Works
+              </Link>
+            </Button>
+          </div>
+           <p className="mt-4 text-sm text-muted-foreground">
               Sign up today and take the first step towards a brighter professional future.
             </p>
-          </div>
         </main>
 
         <footer className="w-full py-8 text-center text-sm text-foreground/70">

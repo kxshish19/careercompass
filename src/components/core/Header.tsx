@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
-import { Compass, LogOut, Trash2 } from 'lucide-react';
+import { Compass, LogOut, Trash2, Menu } from 'lucide-react'; // Added Menu icon
 import { usePathname } from 'next/navigation';
 import { ThemeToggleButton } from './ThemeToggleButton';
 import {
@@ -19,11 +19,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose, // Added SheetClose
+} from "@/components/ui/sheet";
+import { useState } from 'react';
 
 export default function Header() {
   const { user, logout } = useAuth();
   const { clearUserCacheAndResetState } = useAppContext();
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard' },
@@ -35,7 +43,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between">
-        <Link href="/dashboard" className="flex items-center space-x-2 ml-4"> {/* Added ml-4 here */}
+        <Link href="/dashboard" className="flex items-center space-x-2 ml-4">
           <Compass className="h-8 w-8 text-primary" />
           <span className="font-headline text-2xl font-bold text-primary">Career Compass</span>
         </Link>
@@ -88,6 +96,40 @@ export default function Header() {
             <LogOut className="mr-0 sm:mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Logout</span>
           </Button>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[280px] sm:w-[320px]">
+                <div className="p-4">
+                  <Link href="/dashboard" className="flex items-center space-x-2 mb-6" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Compass className="h-8 w-8 text-primary" />
+                    <span className="font-headline text-xl font-bold text-primary">Career Compass</span>
+                  </Link>
+                  <nav className="flex flex-col space-y-2">
+                    {navLinks.map((link) => (
+                       <SheetClose asChild key={link.href}>
+                        <Link
+                          href={link.href}
+                          className={`flex items-center space-x-2 rounded-md px-3 py-2 text-base font-medium
+                            ${pathname === link.href ? 'bg-secondary text-secondary-foreground' : 'hover:bg-muted'}`}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {link.label}
+                        </Link>
+                      </SheetClose>
+                    ))}
+                  </nav>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
     </header>
