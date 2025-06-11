@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Spinner } from '@/components/core/Spinner';
 import { Button } from '@/components/ui/button';
-import { Compass, LogIn, Briefcase, Brain, Route, Zap, Info } from 'lucide-react'; // Added Info icon
+import { Compass, LogIn, Briefcase, Brain, Route, Zap, Info } from 'lucide-react'; // Info icon for Demo link
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggleButton } from '@/components/core/ThemeToggleButton';
@@ -141,7 +141,7 @@ export default function HomePage() {
 
         <footer className="w-full py-8 text-center text-sm text-foreground/70">
           <p>
-            &copy; {currentYear || '...'} Career Compass. All rights reserved.
+            &copy; {currentYear ? currentYear : '...'} Career Compass. All rights reserved.
           </p>
         </footer>
       </div>

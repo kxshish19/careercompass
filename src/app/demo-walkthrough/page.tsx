@@ -1,5 +1,8 @@
 
 // src/app/demo-walkthrough/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -7,6 +10,12 @@ import { Compass, FileText, Lightbulb, Zap, Route, MessageCircle, LogIn, ArrowLe
 import { ThemeToggleButton } from '@/components/core/ThemeToggleButton';
 
 export default function DemoWalkthroughPage() {
+  const [currentYear, setCurrentYear] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear().toString());
+  }, []);
+
   const steps = [
     {
       icon: LogIn,
@@ -88,7 +97,7 @@ export default function DemoWalkthroughPage() {
       </main>
 
       <footer className="w-full py-8 text-center text-sm text-foreground/70">
-        <p>&copy; {new Date().getFullYear()} Career Compass. All rights reserved.</p>
+        <p>&copy; {currentYear ? currentYear : '...'} Career Compass. All rights reserved.</p>
       </footer>
     </div>
   );
