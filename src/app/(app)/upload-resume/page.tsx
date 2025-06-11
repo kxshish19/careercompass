@@ -18,10 +18,11 @@ import Tesseract from 'tesseract.js';
 
 // Setting worker path for pdfjs-dist
 if (typeof window !== 'undefined') {
-  // Use a specific version string matching package.json dependency if pdfjsLib.version is problematic
   const PDFJS_WORKER_VERSION = '4.3.136'; 
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_WORKER_VERSION}/pdf.worker.min.js`;
 }
+
+const MINIMAL_TEXT_LENGTH_THRESHOLD = 100; // Characters
 
 export default function UploadResumePage() {
   const { setResumeText: setContextResumeText, setResumeAnalysis: setContextResumeAnalysis } = useAppContext();
@@ -48,27 +49,60 @@ export default function UploadResumePage() {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setExtractedText(null); // Clear previous extracted text
-      setAnalysisResult(null); // Clear previous analysis
+      setExtractedText(null); 
+      setAnalysisResult(null); 
       setIsProcessingFile(true);
+      toast({ title: 'Processing File...', description: 'Extracting text from your resume. This may take a moment.' });
       try {
         let text = '';
         if (file.type === 'application/pdf') {
           const arrayBuffer = await file.arrayBuffer();
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          let directTextExtraction = '';
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            text += content.items.map((item: any) => item.str).join(' ') + '\n';
+            directTextExtraction += content.items.map((item: any) => item.str).join(' ') + '\n';
           }
+
+          if (directTextExtraction.trim().length < MINIMAL_TEXT_LENGTH_THRESHOLD) {
+            toast({ title: 'Minimal Text Extracted', description: 'Initial PDF text extraction yielded little content. Attempting OCR on PDF pages. This might take longer.' });
+            let ocrTextFromPdf = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const viewport = page.getViewport({ scale: 1.5 }); // Scale can be adjusted for OCR quality
+              const canvas = document.createElement('canvas');
+              const context = canvas.getContext('2d');
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+              
+              if (context) {
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                const imageDataUrl = canvas.toDataURL('image/png');
+                toast({ title: `Processing PDF Page ${i}/${pdf.numPages} with OCR...`});
+                const { data: { text: pageOcrText } } = await Tesseract.recognize(imageDataUrl, 'eng', {
+                  // logger: m => console.log(m) 
+                });
+                ocrTextFromPdf += pageOcrText + '\n';
+              } else {
+                 console.error('Could not get canvas context for PDF page OCR');
+                 toast({ variant: 'destructive', title: `OCR Error on Page ${i}`, description: 'Could not prepare page for OCR.' });
+              }
+            }
+            text = ocrTextFromPdf;
+            toast({ title: 'PDF OCR Complete', description: 'Text extracted from PDF pages using OCR.' });
+          } else {
+            text = directTextExtraction;
+          }
+
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') { // .docx
           const arrayBuffer = await file.arrayBuffer();
           const result = await mammoth.extractRawText({ arrayBuffer });
           text = result.value;
         } else if (file.type.startsWith('image/')) {
-           toast({ title: 'Processing Image...', description: 'OCR can take a moment. Please wait.' });
+           toast({ title: 'Processing Image with OCR...', description: 'This can take a moment, please wait.' });
           const { data: { text: ocrText } } = await Tesseract.recognize(file, 'eng', {
-            // logger: m => console.log(m) // Optional: for progress logs
+            // logger: m => console.log(m) 
           });
           text = ocrText;
         } else {
@@ -78,11 +112,11 @@ export default function UploadResumePage() {
           return;
         }
         setExtractedText(text);
-        setContextResumeText(text); // Update context immediately after extraction
-        toast({ title: 'File Processed', description: 'Resume text extracted successfully.' });
+        setContextResumeText(text); 
+        toast({ title: 'File Processed', description: 'Resume text extracted successfully. Ready for analysis.' });
       } catch (error) {
         console.error('Error processing file:', error);
-        toast({ variant: 'destructive', title: 'File Processing Error', description: 'Could not read text from the file.' });
+        toast({ variant: 'destructive', title: 'File Processing Error', description: 'Could not read text from the file. Check console for details.' });
         setSelectedFile(null);
         setExtractedText(null);
       } finally {
@@ -132,7 +166,7 @@ export default function UploadResumePage() {
   const removeSelectedFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Reset file input
+        fileInputRef.current.value = ""; 
     }
   };
 
@@ -146,6 +180,7 @@ export default function UploadResumePage() {
           </div>
           <CardDescription className="text-base">
             Upload your resume (PDF, DOCX, JPG, PNG) to get an AI-powered analysis, score, and actionable feedback.
+            If a PDF contains mostly images, OCR will be attempted on each page.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -183,7 +218,7 @@ export default function UploadResumePage() {
               {isProcessingFile && (
                  <div className="flex items-center text-sm text-primary">
                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                   Processing file...
+                   Processing file... This may take some time depending on the file.
                  </div>
               )}
                {extractedText && !isProcessingFile && (
@@ -232,12 +267,12 @@ export default function UploadResumePage() {
         </CardContent>
       </Card>
 
-      {(isLoadingAnalysis || isProcessingFile && !selectedFile) && ( // Show general loader if processing without a file yet (initial click)
+      {(isLoadingAnalysis || (isProcessingFile && !selectedFile)) && ( 
         <Card>
           <CardContent className="pt-6 text-center">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
             <p className="mt-2 text-muted-foreground">
-              {isProcessingFile && !selectedFile ? "Waiting for file selection..." : "Analyzing your resume, please wait..."}
+              {isProcessingFile && !selectedFile ? "Waiting for file selection..." : isLoadingAnalysis ? "Analyzing your resume, please wait..." : "Processing file..."}
             </p>
           </CardContent>
         </Card>
@@ -276,4 +311,3 @@ const Label = ({ children, className }: { children: React.ReactNode, className?:
     {children}
   </label>
 );
-
