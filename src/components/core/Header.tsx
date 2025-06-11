@@ -34,13 +34,13 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
+      <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href="/dashboard" className="flex items-center space-x-2">
           <Compass className="h-8 w-8 text-primary" />
           <span className="font-headline text-2xl font-bold text-primary">Career Compass</span>
         </Link>
         
-        <nav className="hidden md:flex items-center space-x-3"> {/* Changed space-x-2 to space-x-3 */}
+        <nav className="hidden md:flex items-center space-x-3">
           {navLinks.map((link) => (
             <Button
               key={link.href}
@@ -53,7 +53,7 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center space-x-3"> {/* Changed space-x-2 to space-x-3 */}
+        <div className="flex items-center space-x-3">
           {user && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
               Welcome, {user.name}
