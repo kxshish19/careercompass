@@ -1,41 +1,109 @@
 // src/app/(app)/upload-resume/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { resumeGrader, type ResumeGraderOutput } from '@/ai/flows/resume-grader';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FileText, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Send, Loader2, CheckCircle, AlertCircle, FileUp, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import * as pdfjsLib from 'pdfjs-dist';
+import mammoth from 'mammoth';
+import Tesseract from 'tesseract.js';
+
+// Setting worker path for pdfjs-dist
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+}
 
 export default function UploadResumePage() {
-  const { resumeText, setResumeText, setResumeAnalysis } = useAppContext();
-  const [currentResumeText, setCurrentResumeText] = useState(resumeText || '');
-  const [isLoading, setIsLoading] = useState(false);
+  const { setResumeText: setContextResumeText, setResumeAnalysis: setContextResumeAnalysis } = useAppContext();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<ResumeGraderOutput | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Clear results if file is removed
+    if (!selectedFile) {
+      setExtractedText(null);
+      setAnalysisResult(null);
+      setContextResumeText(null);
+      setContextResumeAnalysis(null);
+    }
+  }, [selectedFile, setContextResumeText, setContextResumeAnalysis]);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setExtractedText(null); // Clear previous extracted text
+      setAnalysisResult(null); // Clear previous analysis
+      setIsProcessingFile(true);
+      try {
+        let text = '';
+        if (file.type === 'application/pdf') {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map((item: any) => item.str).join(' ') + '\n';
+          }
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') { // .docx
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          text = result.value;
+        } else if (file.type.startsWith('image/')) {
+           toast({ title: 'Processing Image...', description: 'OCR can take a moment. Please wait.' });
+          const { data: { text: ocrText } } = await Tesseract.recognize(file, 'eng', {
+            // logger: m => console.log(m) // Optional: for progress logs
+          });
+          text = ocrText;
+        } else {
+          toast({ variant: 'destructive', title: 'Unsupported File Type', description: 'Please upload a PDF, DOCX, JPG, or PNG file.' });
+          setSelectedFile(null);
+          setIsProcessingFile(false);
+          return;
+        }
+        setExtractedText(text);
+        setContextResumeText(text); // Update context immediately after extraction
+        toast({ title: 'File Processed', description: 'Resume text extracted successfully.' });
+      } catch (error) {
+        console.error('Error processing file:', error);
+        toast({ variant: 'destructive', title: 'File Processing Error', description: 'Could not read text from the file.' });
+        setSelectedFile(null);
+        setExtractedText(null);
+      } finally {
+        setIsProcessingFile(false);
+      }
+    }
+  };
+
   const handleAnalyzeResume = async () => {
-    if (!currentResumeText.trim()) {
+    if (!extractedText) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Please paste your resume text before analyzing.',
+        title: 'No Resume Text',
+        description: 'Please upload and process a resume file first, or ensure the file was read correctly.',
       });
       return;
     }
 
-    setIsLoading(true);
-    setAnalysisResult(null); 
+    setIsLoadingAnalysis(true);
+    setAnalysisResult(null);
     try {
-      const result = await resumeGrader({ resumeText: currentResumeText });
+      const result = await resumeGrader({ resumeText: extractedText });
       setAnalysisResult(result);
-      setResumeText(currentResumeText); // Save to context on successful analysis
-      setResumeAnalysis(result); // Save analysis to context
+      setContextResumeAnalysis(result);
       toast({
         title: 'Resume Analyzed!',
         description: 'Check out your score and feedback below.',
@@ -50,7 +118,18 @@ export default function UploadResumePage() {
         action: <AlertCircle className="text-red-500" />,
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingAnalysis(false);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Reset file input
     }
   };
 
@@ -63,20 +142,65 @@ export default function UploadResumePage() {
             <CardTitle className="text-3xl font-headline">Resume Analyzer</CardTitle>
           </div>
           <CardDescription className="text-base">
-            Paste your resume text below to get an AI-powered analysis, including a score and actionable feedback.
+            Upload your resume (PDF, DOCX, JPG, PNG) to get an AI-powered analysis, score, and actionable feedback.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Textarea
-            placeholder="Paste your full resume text here..."
-            value={currentResumeText}
-            onChange={(e) => setCurrentResumeText(e.target.value)}
-            rows={15}
-            className="text-sm border-input focus:ring-primary"
-            disabled={isLoading}
+          <Input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept=".pdf,.docx,image/jpeg,image/png"
+            disabled={isProcessingFile || isLoadingAnalysis}
           />
-          <Button onClick={handleAnalyzeResume} disabled={isLoading || !currentResumeText.trim()} className="w-full sm:w-auto">
-            {isLoading ? (
+          
+          {!selectedFile ? (
+            <Button 
+              onClick={triggerFileInput} 
+              variant="outline" 
+              className="w-full border-dashed border-2 py-10 flex-col h-auto"
+              disabled={isProcessingFile || isLoadingAnalysis}
+            >
+              <FileUp className="h-10 w-10 text-muted-foreground mb-2" />
+              <span className="font-semibold text-primary">Click to upload your resume</span>
+              <span className="text-sm text-muted-foreground">PDF, DOCX, JPG, or PNG</span>
+            </Button>
+          ) : (
+            <div className="p-4 border rounded-md bg-muted/50 space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={removeSelectedFile} disabled={isProcessingFile || isLoadingAnalysis} aria-label="Remove file">
+                  <XCircle className="h-5 w-5 text-destructive hover:text-destructive/80" />
+                </Button>
+              </div>
+              {isProcessingFile && (
+                 <div className="flex items-center text-sm text-primary">
+                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                   Processing file...
+                 </div>
+              )}
+               {extractedText && !isProcessingFile && (
+                <Alert variant="default" className="bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <AlertDescription className="text-green-700 dark:text-green-300">
+                    File processed. Ready to analyze.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          <Button 
+            onClick={handleAnalyzeResume} 
+            disabled={isProcessingFile || isLoadingAnalysis || !extractedText} 
+            className="w-full sm:w-auto"
+            size="lg"
+          >
+            {isLoadingAnalysis ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Analyzing...
@@ -88,19 +212,35 @@ export default function UploadResumePage() {
               </>
             )}
           </Button>
+
+          {extractedText && !isProcessingFile && (
+            <Card className="bg-background/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Extracted Text Preview (first 500 chars):</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground whitespace-pre-wrap break-all p-2 border rounded-md max-h-40 overflow-y-auto">
+                  {extractedText.substring(0, 500)}...
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
         </CardContent>
       </Card>
 
-      {isLoading && (
+      {(isLoadingAnalysis || isProcessingFile && !selectedFile) && ( // Show general loader if processing without a file yet (initial click)
         <Card>
           <CardContent className="pt-6 text-center">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-2 text-muted-foreground">Analyzing your resume, please wait...</p>
+            <p className="mt-2 text-muted-foreground">
+              {isProcessingFile && !selectedFile ? "Waiting for file selection..." : "Analyzing your resume, please wait..."}
+            </p>
           </CardContent>
         </Card>
       )}
 
-      {analysisResult && !isLoading && (
+      {analysisResult && !isLoadingAnalysis && (
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-headline text-primary">Analysis Results</CardTitle>
