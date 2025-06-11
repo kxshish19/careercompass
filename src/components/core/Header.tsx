@@ -35,7 +35,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between">
-        <Link href="/dashboard" className="flex items-center space-x-2">
+        <Link href="/dashboard" className="flex items-center space-x-2 ml-4"> {/* Added ml-4 here */}
           <Compass className="h-8 w-8 text-primary" />
           <span className="font-headline text-2xl font-bold text-primary">Career Compass</span>
         </Link>
@@ -72,7 +72,7 @@ export default function Header() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action will permanently delete all your cached application data (resume, quiz answers, AI results) for the account '{user.email}' from this browser. This cannot be undone.
+                    This action will permanently delete all your cached application data (resume, quiz answers, AI results) for the account '{user?.email || 'current user'}' from this browser. This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
